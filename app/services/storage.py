@@ -127,16 +127,19 @@ class StorageService:
         # Return default path (may not exist)
         return upload_dir / f"{file_id}.xlsx"
     
-    def get_processed_file_path(self, file_id: str) -> Path:
+    def get_processed_file_path(self, file_id: str, format_type: str = "styled") -> Path:
         """
         Get the path to a processed file.
         
         Args:
             file_id: The file identifier.
+            format_type: "styled" (preserve formatting) or "plain" (text only).
             
         Returns:
             Path to the processed file.
         """
+        if format_type == "plain":
+            return self.storage_dir / "processed" / f"{file_id}_mapped_plain.xlsx"
         return self.storage_dir / "processed" / f"{file_id}_mapped.xlsx"
     
     def save_processed_file(
@@ -171,6 +174,10 @@ class StorageService:
         """
         Save multiple processed DataFrames to separate sheets in one Excel file.
         
+        NOTE: This method does NOT preserve formatting from original file.
+        Use copy_file_for_processing() + ExcelProcessor.map_workbook_preserve_style()
+        for style preservation.
+        
         Args:
             file_id: The original file identifier.
             sheets_data: Dictionary of sheet_name -> DataFrame.
@@ -195,6 +202,37 @@ class StorageService:
         )
         
         return output_path
+    
+    def copy_file_for_processing(self, file_id: str, format_type: str = "styled") -> Path:
+        """
+        Copy uploaded file to processed directory for in-place mapping.
+        
+        This is used for style-preserving mapping where we modify the 
+        Excel file directly instead of creating a new one.
+        
+        Args:
+            file_id: The file identifier.
+            format_type: "styled" or "plain".
+            
+        Returns:
+            Path to the copied file in processed directory.
+        """
+        source_path = self.get_uploaded_file_path(file_id)
+        dest_path = self.get_processed_file_path(file_id, format_type)
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Copy the file
+        shutil.copy2(source_path, dest_path)
+        
+        logger.info(
+            "File copied for processing",
+            file_id=file_id,
+            format_type=format_type,
+            source=str(source_path),
+            dest=str(dest_path)
+        )
+        
+        return dest_path
     
     def delete_uploaded_file(self, file_id: str) -> bool:
         """

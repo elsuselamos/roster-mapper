@@ -33,11 +33,22 @@
                     </div>
                     
                     {% if not result.error %}
-                    <a href="{{ result.download_url }}" 
-                       class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2">
-                        <span>⬇️</span>
-                        <span>Download Excel</span>
-                    </a>
+                    <div class="flex items-center space-x-2">
+                        <!-- Download với định dạng gốc -->
+                        <a href="{{ result.download_url_styled or result.download_url }}" 
+                           class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-1 text-sm"
+                           title="Giữ nguyên màu sắc, font, định dạng của file gốc">
+                            <span>🎨</span>
+                            <span>Giữ Format</span>
+                        </a>
+                        <!-- Download text thuần -->
+                        <a href="{{ result.download_url_plain or (result.download_url + '?format=plain') }}" 
+                           class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-1 text-sm"
+                           title="Chỉ giữ text, không có màu sắc hay định dạng (giống CSV)">
+                            <span>📄</span>
+                            <span>Text Only</span>
+                        </a>
+                    </div>
                     {% else %}
                     <span class="text-red-600 text-sm">Error: {{ result.error }}</span>
                     {% endif %}
@@ -103,6 +114,33 @@
             {% endif %}
         </div>
         {% endfor %}
+    </div>
+    
+    <!-- Download Options Explanation -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">📥 Tùy chọn Download</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+            <div class="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+                <span class="text-2xl">🎨</span>
+                <div>
+                    <h4 class="font-medium text-green-800">Giữ Format</h4>
+                    <p class="text-sm text-green-600">
+                        Giữ nguyên toàn bộ định dạng gốc: màu sắc, font chữ, border, 
+                        merge cells, chiều rộng cột... Chỉ thay đổi nội dung text.
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
+                <span class="text-2xl">📄</span>
+                <div>
+                    <h4 class="font-medium text-blue-800">Text Only</h4>
+                    <p class="text-sm text-blue-600">
+                        Chỉ giữ nội dung text thuần, không có định dạng. 
+                        Phù hợp để import vào hệ thống khác hoặc xử lý tiếp.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Summary Card -->

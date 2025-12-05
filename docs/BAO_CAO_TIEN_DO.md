@@ -8,7 +8,7 @@
 |-----------|----------|
 | **Dự án** | Roster Mapper - Công cụ chuyển đổi mã roster |
 | **Bộ phận** | Quản lý Bảo dưỡng (Maintenance Ops) |
-| **Phiên bản** | v0.2.0 |
+| **Phiên bản** | v1.0.0 |
 | **Ngày báo cáo** | 05/12/2024 |
 | **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** |
 | **Liên hệ** | datnguyentien@vietjetair.com |
@@ -108,7 +108,7 @@ tests/test_ui_routes.py .........              [100%]
 | Resource | URL |
 |----------|-----|
 | GitHub Repository | https://github.com/elsuselamos/roster-mapper |
-| Release v0.2.0 | https://github.com/elsuselamos/roster-mapper/releases/tag/v0.2.0 |
+| Release v1.0.0 | https://github.com/elsuselamos/roster-mapper/releases/tag/v1.0.0 |
 | Local Demo | http://localhost:8000 |
 
 ---

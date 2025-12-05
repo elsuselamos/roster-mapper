@@ -3,15 +3,20 @@ Excel Processor Service
 =======================
 Handles reading and writing Excel files for roster processing.
 
+IMPORTANT: This module preserves Excel formatting (styles, colors, fonts, etc.)
+when performing mapping operations. Only cell values are modified.
+
 Author: datnguyentien@vietjetair.com
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
 from pathlib import Path
+from copy import copy
 
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.cell.cell import Cell
 
 from app.core.logging import get_logger
 
@@ -427,6 +432,9 @@ class ExcelProcessor:
         """
         Copy workbook and replace multiple sheets with mapped data.
         
+        NOTE: This method does NOT preserve formatting. Use 
+        map_workbook_preserve_style() instead for style preservation.
+        
         Args:
             source_path: Original Excel file.
             dest_path: Destination file path.
@@ -476,4 +484,186 @@ class ExcelProcessor:
         )
         
         return dest_path
+    
+    def map_workbook_preserve_style(
+        self,
+        source_path: Path | str,
+        dest_path: Path | str,
+        mapper_func: Callable[[Any], str],
+        sheet_names: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Map codes in workbook while PRESERVING all Excel formatting.
+        
+        This method iterates through each cell and only changes the value,
+        keeping all styles, colors, fonts, borders, and other formatting intact.
+        
+        Args:
+            source_path: Original Excel file.
+            dest_path: Destination file path.
+            mapper_func: Function that takes cell value and returns mapped value.
+                         Should be Mapper.map_cell method.
+            sheet_names: List of sheets to process (None for all).
+            
+        Returns:
+            Dictionary with mapping statistics per sheet.
+            
+        Example:
+            >>> from app.services.mapper import Mapper
+            >>> mapper = Mapper("HAN")
+            >>> processor = ExcelProcessor()
+            >>> stats = processor.map_workbook_preserve_style(
+            ...     "input.xlsx",
+            ...     "output.xlsx", 
+            ...     mapper.map_cell,
+            ...     sheet_names=["Sheet1", "Sheet2"]
+            ... )
+        """
+        source_path = Path(source_path)
+        dest_path = Path(dest_path)
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        logger.info(
+            "Mapping workbook with style preservation",
+            source=str(source_path),
+            dest=str(dest_path)
+        )
+        
+        # Load workbook - do NOT use read_only or data_only to preserve styles
+        wb = load_workbook(source_path)
+        
+        # Determine sheets to process
+        if sheet_names is None:
+            sheets_to_process = wb.sheetnames
+        else:
+            sheets_to_process = [s for s in sheet_names if s in wb.sheetnames]
+        
+        # Statistics
+        all_stats = {}
+        
+        for sheet_name in sheets_to_process:
+            ws = wb[sheet_name]
+            
+            sheet_stats = {
+                "total_cells": 0,
+                "mapped_cells": 0,
+                "unchanged_cells": 0,
+                "empty_cells": 0
+            }
+            
+            # Iterate through all cells with data
+            for row in ws.iter_rows():
+                for cell in row:
+                    sheet_stats["total_cells"] += 1
+                    
+                    # Skip empty cells
+                    if cell.value is None or str(cell.value).strip() == "":
+                        sheet_stats["empty_cells"] += 1
+                        continue
+                    
+                    original_value = cell.value
+                    original_str = str(original_value)
+                    
+                    # Apply mapping
+                    mapped_value = mapper_func(original_value)
+                    
+                    # Only update if value changed
+                    if mapped_value != original_str:
+                        # Preserve the cell's style, only change value
+                        cell.value = mapped_value
+                        sheet_stats["mapped_cells"] += 1
+                    else:
+                        sheet_stats["unchanged_cells"] += 1
+            
+            all_stats[sheet_name] = sheet_stats
+            
+            logger.info(
+                f"Sheet '{sheet_name}' mapped",
+                **sheet_stats
+            )
+        
+        # Save to destination
+        wb.save(dest_path)
+        wb.close()
+        
+        logger.info(
+            "Workbook mapping completed with style preservation",
+            source=str(source_path),
+            dest=str(dest_path),
+            sheets_processed=len(sheets_to_process)
+        )
+        
+        return all_stats
+    
+    def get_preview_with_mapping(
+        self,
+        file_path: Path | str,
+        sheet_name: str,
+        mapper_func: Callable[[Any], str],
+        max_rows: int = 20
+    ) -> Dict[str, Any]:
+        """
+        Preview sheet data with mapping applied (for UI preview).
+        
+        Returns both original and mapped values for comparison.
+        
+        Args:
+            file_path: Path to the Excel file.
+            sheet_name: Name of the sheet to preview.
+            mapper_func: Mapping function.
+            max_rows: Maximum rows to preview.
+            
+        Returns:
+            Dictionary with preview data including mapped/unmapped status.
+        """
+        file_path = Path(file_path)
+        wb = load_workbook(file_path, read_only=True)
+        ws = wb[sheet_name]
+        
+        preview_data = {
+            "headers": [],
+            "rows": [],
+            "cell_status": [],  # "mapped", "unmapped", "empty"
+            "total_mapped": 0,
+            "total_unmapped": 0,
+            "total_empty": 0
+        }
+        
+        row_count = 0
+        for row_idx, row in enumerate(ws.iter_rows(values_only=True)):
+            if row_idx == 0:
+                # First row as headers
+                preview_data["headers"] = [str(h) if h else "" for h in row]
+                continue
+            
+            if row_count >= max_rows:
+                break
+            
+            row_values = []
+            row_status = []
+            
+            for cell_value in row:
+                if cell_value is None or str(cell_value).strip() == "":
+                    row_values.append("")
+                    row_status.append("empty")
+                    preview_data["total_empty"] += 1
+                else:
+                    original = str(cell_value)
+                    mapped = mapper_func(cell_value)
+                    row_values.append(mapped)
+                    
+                    if mapped != original:
+                        row_status.append("mapped")
+                        preview_data["total_mapped"] += 1
+                    else:
+                        row_status.append("unmapped")
+                        preview_data["total_unmapped"] += 1
+            
+            preview_data["rows"].append(row_values)
+            preview_data["cell_status"].append(row_status)
+            row_count += 1
+        
+        wb.close()
+        
+        return preview_data
 

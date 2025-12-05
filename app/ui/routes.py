@@ -332,63 +332,66 @@ async def process_files(request: Request):
             selected_sheets = file_info.get("sheets", [])[:1]  # Fallback to first sheet
         
         try:
-            # Process each selected sheet
-            mapped_sheets = {}
             total_stats = {
                 "total_cells": 0,
                 "mapped_cells": 0,
                 "unmapped_cells": 0,
+                "empty_cells": 0,
                 "sheets_processed": 0
             }
             sheet_results = []
             
+            # ========== FORMAT 1: STYLED (preserve formatting) ==========
+            # Copy original file and map directly to preserve styles
+            styled_path = storage.copy_file_for_processing(file_info["file_id"], "styled")
+            styled_stats = processor.map_workbook_preserve_style(
+                source_path=file_path,
+                dest_path=styled_path,
+                mapper_func=mapper.map_cell,
+                sheet_names=selected_sheets
+            )
+            
+            # Aggregate stats from styled processing
+            for sheet_name, stats in styled_stats.items():
+                total_stats["total_cells"] += stats.get("total_cells", 0)
+                total_stats["mapped_cells"] += stats.get("mapped_cells", 0)
+                total_stats["unmapped_cells"] += stats.get("unchanged_cells", 0)
+                total_stats["empty_cells"] += stats.get("empty_cells", 0)
+                total_stats["sheets_processed"] += 1
+                
+                sheet_results.append({
+                    "sheet": sheet_name,
+                    "rows": stats.get("total_cells", 0),
+                    "mapped": stats.get("mapped_cells", 0),
+                    "unmapped": stats.get("unchanged_cells", 0)
+                })
+            
+            # ========== FORMAT 2: PLAIN (text only, no formatting) ==========
+            # Use DataFrame approach for clean text output
+            mapped_sheets = {}
             for sheet in selected_sheets:
                 try:
                     df = processor.read_workbook(file_path, sheet)
-                    mapped_df, stats = mapper.map_dataframe(df)
+                    mapped_df, _ = mapper.map_dataframe(df)
                     mapped_sheets[sheet] = mapped_df
-                    
-                    # Aggregate stats
-                    total_stats["total_cells"] += stats.get("total_cells", 0)
-                    total_stats["mapped_cells"] += stats.get("mapped_cells", 0)
-                    total_stats["unmapped_cells"] += stats.get("unmapped_cells", 0)
-                    total_stats["sheets_processed"] += 1
-                    
-                    sheet_results.append({
-                        "sheet": sheet,
-                        "rows": len(mapped_df),
-                        "mapped": stats.get("mapped_cells", 0),
-                        "unmapped": stats.get("unmapped_cells", 0)
-                    })
-                    
                 except Exception as e:
-                    logger.error(f"Error processing sheet {sheet}: {e}")
-                    sheet_results.append({
-                        "sheet": sheet,
-                        "error": str(e)
-                    })
+                    logger.error(f"Error processing sheet {sheet} for plain format: {e}")
             
-            # Save output with all mapped sheets
             if mapped_sheets:
-                output_path = storage.save_processed_file_multi_sheet(
-                    file_info["file_id"], 
+                storage.save_processed_file_multi_sheet(
+                    file_info["file_id"] + "_plain",
                     mapped_sheets
                 )
-                
-                results.append({
-                    "file_id": file_info["file_id"],
-                    "filename": file_info["filename"],
-                    "station": file_info["station"],
-                    "stats": total_stats,
-                    "sheet_results": sheet_results,
-                    "download_url": f"/api/v1/download/{file_info['file_id']}"
-                })
-            else:
-                results.append({
-                    "file_id": file_info["file_id"],
-                    "filename": file_info["filename"],
-                    "error": "No sheets could be processed"
-                })
+            
+            results.append({
+                "file_id": file_info["file_id"],
+                "filename": file_info["filename"],
+                "station": file_info["station"],
+                "stats": total_stats,
+                "sheet_results": sheet_results,
+                "download_url_styled": f"/api/v1/download/{file_info['file_id']}?format=styled",
+                "download_url_plain": f"/api/v1/download/{file_info['file_id']}?format=plain"
+            })
                 
         except Exception as e:
             logger.error(f"Processing error: {e}")

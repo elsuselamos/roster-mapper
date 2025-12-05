@@ -218,21 +218,39 @@ async def process_file(
 
 
 @router.get("/download/{file_id}")
-async def download_file(file_id: str) -> FileResponse:
+async def download_file(
+    file_id: str,
+    format: str = Query("styled", description="Format: 'styled' (preserve formatting) or 'plain' (text only)")
+) -> FileResponse:
     """
     Download a processed file.
     
     Returns the mapped Excel file for download.
+    
+    Query Parameters:
+        format: 'styled' to keep original formatting (colors, fonts, etc.)
+                'plain' for clean text-only output (like CSV in Excel)
     """
     storage = StorageService()
-    output_path = storage.get_processed_file_path(file_id)
+    
+    # Handle format parameter
+    if format == "plain":
+        # Plain format uses a different file ID pattern
+        output_path = storage.get_processed_file_path(file_id + "_plain", "styled")
+        if not output_path.exists():
+            # Fallback: try the plain suffix path
+            output_path = storage.get_processed_file_path(file_id, "plain")
+        filename_suffix = "plain"
+    else:
+        output_path = storage.get_processed_file_path(file_id, "styled")
+        filename_suffix = "styled"
     
     if not output_path.exists():
         raise HTTPException(status_code=404, detail="Processed file not found")
     
     return FileResponse(
         path=output_path,
-        filename=f"mapped_{file_id}.xlsx",
+        filename=f"mapped_{file_id}_{filename_suffix}.xlsx",
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
