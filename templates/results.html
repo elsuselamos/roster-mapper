@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- Header -->
+    <div class="text-center">
+        <div class="text-6xl mb-4">🎉</div>
+        <h1 class="text-2xl font-bold text-gray-900">Mapping Complete!</h1>
+        <p class="mt-2 text-gray-600">{{ results | length }} file(s) đã được xử lý</p>
+    </div>
+    
+    <!-- Results List -->
+    <div class="space-y-4">
+        {% for result in results %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <!-- File Header -->
+            <div class="p-6 {% if result.error %}bg-red-50{% else %}bg-green-50{% endif %}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-3xl">
+                            {% if result.error %}❌{% else %}✅{% endif %}
+                        </span>
+                        <div>
+                            <h3 class="font-semibold text-gray-900">{{ result.filename }}</h3>
+                            <p class="text-sm text-gray-500">
+                                Station: <span class="font-medium text-vj-red">{{ result.station }}</span>
+                                {% if result.sheet_results %}
+                                | {{ result.sheet_results | length }} sheets processed
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if not result.error %}
+                    <a href="{{ result.download_url }}" 
+                       class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2">
+                        <span>⬇️</span>
+                        <span>Download Excel</span>
+                    </a>
+                    {% else %}
+                    <span class="text-red-600 text-sm">Error: {{ result.error }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if result.stats %}
+            <!-- Overall Stats -->
+            <div class="p-4 border-b border-gray-200">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">📊 Overall Stats</h4>
+                <div class="grid grid-cols-4 gap-4 text-center">
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-2xl font-bold text-gray-900">{{ result.stats.total_cells }}</p>
+                        <p class="text-xs text-gray-500">Total Cells</p>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-3">
+                        <p class="text-2xl font-bold text-green-600">{{ result.stats.mapped_cells }}</p>
+                        <p class="text-xs text-green-600">Mapped</p>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg p-3">
+                        <p class="text-2xl font-bold text-yellow-600">{{ result.stats.unmapped_cells }}</p>
+                        <p class="text-xs text-yellow-600">Unmapped</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg p-3">
+                        <p class="text-2xl font-bold text-blue-600">{{ result.stats.sheets_processed }}</p>
+                        <p class="text-xs text-blue-600">Sheets</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if result.sheet_results %}
+            <!-- Per-Sheet Results -->
+            <div class="p-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">📋 Sheet Details</h4>
+                <div class="space-y-2">
+                    {% for sheet in result.sheet_results %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            {% if sheet.error %}
+                            <span class="text-red-500">❌</span>
+                            {% else %}
+                            <span class="text-green-500">✅</span>
+                            {% endif %}
+                            <span class="font-medium text-gray-900">{{ sheet.sheet }}</span>
+                        </div>
+                        
+                        {% if sheet.error %}
+                        <span class="text-sm text-red-600">{{ sheet.error }}</span>
+                        {% else %}
+                        <div class="flex items-center space-x-4 text-sm">
+                            <span class="text-gray-600">{{ sheet.rows }} rows</span>
+                            <span class="text-green-600">{{ sheet.mapped }} mapped</span>
+                            {% if sheet.unmapped > 0 %}
+                            <span class="text-yellow-600">{{ sheet.unmapped }} unmapped</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Summary Card -->
+    {% if results %}
+    <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white text-center">
+        <p class="text-lg font-medium">
+            🎊 Đã xử lý thành công 
+            <strong>{{ results | selectattr('stats') | list | length }}</strong> file(s)
+            với tổng cộng 
+            <strong>{{ results | selectattr('stats') | sum(attribute='stats.sheets_processed') }}</strong> sheets
+        </p>
+    </div>
+    {% endif %}
+    
+    <!-- Actions -->
+    <div class="flex justify-center space-x-4 pt-6">
+        <a href="/upload" class="px-6 py-3 bg-vj-red hover:bg-vj-red-dark text-white font-medium rounded-lg transition-colors">
+            📤 Upload More Files
+        </a>
+        <a href="/dashboard" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
+            📊 View Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

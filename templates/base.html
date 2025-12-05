@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title | default('Roster Mapper') }}{% endblock %} - Vietjet AMO</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'vj-red': '#E31837',
+                        'vj-red-dark': '#B71530',
+                        'vj-yellow': '#FFD700',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        .htmx-request .htmx-indicator { display: inline-block; }
+        .htmx-indicator { display: none; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #999; }
+        
+        /* Mapped cell highlight */
+        .cell-mapped { background-color: #d1fae5 !important; }
+        .cell-unmapped { background-color: #fee2e2 !important; }
+    </style>
+    
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50">
+    <div class="min-h-full">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <!-- Logo -->
+                    <div class="flex items-center">
+                        <a href="/" class="flex items-center space-x-3">
+                            <span class="text-2xl">🛫</span>
+                            <div>
+                                <h1 class="text-xl font-bold">
+                                    <span class="text-vj-red">ROSTER</span>
+                                    <span class="text-gray-800">MAPPER</span>
+                                </h1>
+                                <p class="text-xs text-gray-500">Vietjet AMO</p>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <!-- Navigation Links -->
+                    <div class="flex items-center space-x-1">
+                        <a href="/upload" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                                  {% if request.url.path == '/upload' %}bg-vj-red text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+                            📤 Upload
+                        </a>
+                        <a href="/admin" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                                  {% if request.url.path == '/admin' %}bg-vj-red text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+                            ⚙️ Admin
+                        </a>
+                        <a href="/dashboard" 
+                           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                                  {% if request.url.path == '/dashboard' %}bg-vj-red text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+                            📊 Dashboard
+                        </a>
+                        <a href="/docs" target="_blank"
+                           class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+                            📚 API Docs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex justify-between items-center text-sm text-gray-500">
+                    <p>© 2024 Vietjet AMO - IT Department</p>
+                    <p>
+                        <a href="mailto:datnguyentien@vietjetair.com" class="text-vj-red hover:underline">
+                            datnguyentien@vietjetair.com
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

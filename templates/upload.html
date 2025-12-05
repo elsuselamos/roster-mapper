@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto" x-data="uploadApp()">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">📤 Upload Roster Files</h1>
+        <p class="mt-2 text-gray-600">Chọn file Excel roster để mapping codes</p>
+    </div>
+    
+    {% if error %}
+    <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-red-800">❌ {{ error }}</p>
+    </div>
+    {% endif %}
+    
+    <form action="/upload" method="POST" enctype="multipart/form-data" class="space-y-6">
+        
+        <!-- Station Selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">🌍 Station Selection</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Station</label>
+                    <select name="station" x-model="station"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-vj-red focus:ring-vj-red">
+                        <option value="auto">🔍 Auto-detect từ filename</option>
+                        {% for s in stations %}
+                        <option value="{{ s.code }}">
+                            {{ s.code }} {% if s.has_mapping %}({{ s.count }} mappings){% else %}⚠️{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="flex items-end">
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" name="auto_detect" value="true" x-model="autoDetect"
+                               class="rounded border-gray-300 text-vj-red focus:ring-vj-red">
+                        <span class="text-sm text-gray-700">Auto-detect station từ filename</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Station Status -->
+            <div class="mt-4 grid grid-cols-7 gap-2">
+                {% for s in stations %}
+                <div class="text-center p-2 rounded-lg {% if s.has_mapping %}bg-green-50{% else %}bg-gray-50{% endif %}">
+                    <div class="font-semibold {% if s.has_mapping %}text-green-700{% else %}text-gray-500{% endif %}">
+                        {{ s.code }}
+                    </div>
+                    <div class="text-xs {% if s.has_mapping %}text-green-600{% else %}text-gray-400{% endif %}">
+                        {{ s.count }} codes
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- File Upload -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">📁 Upload Files</h2>
+            
+            <div class="relative"
+                 @dragover.prevent="dragging = true"
+                 @dragleave.prevent="dragging = false"
+                 @drop.prevent="handleDrop($event)">
+                
+                <div class="border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer"
+                     :class="dragging ? 'border-vj-red bg-red-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'"
+                     @click="$refs.fileInput.click()">
+                    
+                    <template x-if="files.length === 0">
+                        <div>
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p class="mt-4 text-sm text-gray-600">
+                                <span class="font-medium text-vj-red">Chọn files</span>
+                                hoặc kéo thả vào đây
+                            </p>
+                            <p class="mt-2 text-xs text-gray-500">Excel (.xlsx, .xls) - Có thể chọn nhiều files</p>
+                        </div>
+                    </template>
+                    
+                    <template x-if="files.length > 0">
+                        <div class="space-y-2">
+                            <template x-for="(file, index) in files" :key="index">
+                                <div class="flex items-center justify-center space-x-3 text-left bg-gray-50 rounded-lg p-3">
+                                    <span class="text-2xl">📄</span>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-900 text-sm" x-text="file.name"></p>
+                                        <p class="text-xs text-gray-500" x-text="formatSize(file.size)"></p>
+                                    </div>
+                                    <button type="button" @click.stop="removeFile(index)" 
+                                            class="text-gray-400 hover:text-red-500">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <p class="text-sm text-gray-500 mt-2">Click để thêm files</p>
+                        </div>
+                    </template>
+                    
+                    <input type="file" name="files" x-ref="fileInput" 
+                           @change="handleFileSelect($event)"
+                           accept=".xlsx,.xls" 
+                           multiple
+                           class="hidden">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="flex justify-end space-x-4">
+            <button type="button" @click="clearAll()"
+                    class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
+                🔄 Clear All
+            </button>
+            <button type="submit" 
+                    :disabled="files.length === 0"
+                    class="px-8 py-3 bg-vj-red hover:bg-vj-red-dark text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                ➡️ Preview Mapping
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function uploadApp() {
+    return {
+        files: [],
+        station: 'auto',
+        autoDetect: {{ 'true' if auto_detect else 'false' }},
+        dragging: false,
+        
+        handleFileSelect(event) {
+            const newFiles = Array.from(event.target.files);
+            this.files = [...this.files, ...newFiles];
+            this.updateFileInput();
+        },
+        
+        handleDrop(event) {
+            this.dragging = false;
+            const newFiles = Array.from(event.dataTransfer.files).filter(f => 
+                f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
+            );
+            this.files = [...this.files, ...newFiles];
+            this.updateFileInput();
+        },
+        
+        removeFile(index) {
+            this.files.splice(index, 1);
+            this.updateFileInput();
+        },
+        
+        clearAll() {
+            this.files = [];
+            this.updateFileInput();
+        },
+        
+        updateFileInput() {
+            // Create new FileList-like object
+            const dt = new DataTransfer();
+            this.files.forEach(f => dt.items.add(f));
+            this.$refs.fileInput.files = dt.files;
+        },
+        
+        formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+    }
+}
+</script>
+{% endblock %}
+

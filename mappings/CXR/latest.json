@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "version": "20241205_150000",
+    "station": "CXR",
+    "created_at": "2024-12-05T15:00:00",
+    "created_by": "system",
+    "entry_count": 6,
+    "description": "Sample mappings for Cam Ranh (CXR)"
+  },
+  "mappings": {
+    "DT": "HC",
+    "DO": "HC",
+    "ML": "HC",
+    "BD1_O": "BD1",
+    "BD2_O": "BD2",
+    "AL": "BD1"
+  }
+}

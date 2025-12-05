@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "version": "20241205_150000",
+    "station": "HPH",
+    "created_at": "2024-12-05T15:00:00",
+    "created_by": "system",
+    "entry_count": 5,
+    "description": "Sample mappings for Cat Bi (HPH)"
+  },
+  "mappings": {
+    "DT": "HC",
+    "DO": "HC",
+    "ML": "HC",
+    "BD1_O": "BD1",
+    "AL": "BD1"
+  }
+}

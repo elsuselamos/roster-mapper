@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Upload{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto" x-data="uploadApp()">
+    
+    <!-- Upload Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">📁 Upload File Excel</h2>
+        
+        <!-- Drop Zone -->
+        <div class="relative"
+             @dragover.prevent="dragging = true"
+             @dragleave.prevent="dragging = false"
+             @drop.prevent="handleDrop($event)">
+            
+            <div class="border-2 border-dashed rounded-xl p-12 text-center transition-colors"
+                 :class="dragging ? 'border-vj-red bg-red-50' : 'border-gray-300 hover:border-gray-400'">
+                
+                <template x-if="!file">
+                    <div>
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="mt-4 text-sm text-gray-600">
+                            <span class="font-medium text-vj-red cursor-pointer" @click="$refs.fileInput.click()">
+                                Chọn file
+                            </span>
+                            hoặc kéo thả vào đây
+                        </p>
+                        <p class="mt-2 text-xs text-gray-500">Hỗ trợ: .xlsx, .xls (tối đa 10MB)</p>
+                    </div>
+                </template>
+                
+                <template x-if="file">
+                    <div class="flex items-center justify-center space-x-3">
+                        <span class="text-3xl">📄</span>
+                        <div class="text-left">
+                            <p class="font-medium text-gray-900" x-text="file.name"></p>
+                            <p class="text-sm text-gray-500" x-text="formatSize(file.size)"></p>
+                        </div>
+                        <button @click="clearFile()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </template>
+                
+                <input type="file" 
+                       x-ref="fileInput" 
+                       @change="handleFileSelect($event)"
+                       accept=".xlsx,.xls" 
+                       class="hidden">
+            </div>
+        </div>
+        
+        <!-- Upload Progress -->
+        <template x-if="uploading">
+            <div class="mt-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Đang tải lên...</span>
+                    <span x-text="uploadProgress + '%'"></span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-vj-red rounded-full h-2 transition-all" :style="'width: ' + uploadProgress + '%'"></div>
+                </div>
+            </div>
+        </template>
+    </div>
+    
+    <!-- Options Section -->
+    <template x-if="fileId">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">⚙️ Cài đặt xử lý</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Sheet Selector -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sheet</label>
+                    <select x-model="selectedSheet" 
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-vj-red focus:ring-vj-red">
+                        <template x-for="sheet in sheets" :key="sheet">
+                            <option :value="sheet" x-text="sheet"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <!-- Station Selector -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Station</label>
+                    <select x-model="selectedStation"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-vj-red focus:ring-vj-red">
+                        <option value="">Auto-detect</option>
+                        <option value="SGN">SGN - Tân Sơn Nhất</option>
+                        <option value="HAN">HAN - Nội Bài</option>
+                        <option value="DAD">DAD - Đà Nẵng</option>
+                        <option value="CXR">CXR - Cam Ranh</option>
+                        <option value="HPH">HPH - Cát Bi</option>
+                        <option value="VCA">VCA - Cần Thơ</option>
+                        <option value="VII">VII - Vinh</option>
+                    </select>
+                </div>
+                
+                <!-- Process Button -->
+                <div class="flex items-end">
+                    <button @click="processFile()"
+                            :disabled="processing"
+                            class="w-full bg-vj-red hover:bg-vj-red-dark text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!processing">🔄 Xử lý</span>
+                        <span x-show="processing">⏳ Đang xử lý...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Preview Section -->
+    <template x-if="preview">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">👁️ Preview</h2>
+                <span class="text-sm text-gray-500" x-text="'Hiển thị 10/' + preview.total_rows + ' dòng'"></span>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <template x-for="header in preview.headers" :key="header">
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    x-text="header"></th>
+                            </template>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <template x-for="(row, idx) in preview.rows" :key="idx">
+                            <tr class="hover:bg-gray-50">
+                                <template x-for="(cell, cidx) in row" :key="cidx">
+                                    <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" x-text="cell"></td>
+                                </template>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Result Section -->
+    <template x-if="result">
+        <div class="bg-green-50 border border-green-200 rounded-xl p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <p class="font-medium text-green-800">Xử lý thành công!</p>
+                        <p class="text-sm text-green-600">
+                            <span x-text="result.stats.mapped_cells"></span>/<span x-text="result.stats.total_cells"></span> cells đã được map
+                        </p>
+                    </div>
+                </div>
+                <a :href="result.download_url"
+                   class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+                    ⬇️ Download
+                </a>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Error Section -->
+    <template x-if="error">
+        <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">❌</span>
+                <div>
+                    <p class="font-medium text-red-800">Có lỗi xảy ra</p>
+                    <p class="text-sm text-red-600" x-text="error"></p>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function uploadApp() {
+    return {
+        file: null,
+        fileId: null,
+        sheets: [],
+        selectedSheet: '',
+        selectedStation: '',
+        preview: null,
+        result: null,
+        error: null,
+        dragging: false,
+        uploading: false,
+        uploadProgress: 0,
+        processing: false,
+        
+        handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                this.file = files[0];
+                this.uploadFile();
+            }
+        },
+        
+        handleDrop(event) {
+            this.dragging = false;
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                this.file = files[0];
+                this.uploadFile();
+            }
+        },
+        
+        clearFile() {
+            this.file = null;
+            this.fileId = null;
+            this.sheets = [];
+            this.preview = null;
+            this.result = null;
+            this.error = null;
+        },
+        
+        formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+        
+        async uploadFile() {
+            this.uploading = true;
+            this.uploadProgress = 0;
+            this.error = null;
+            
+            const formData = new FormData();
+            formData.append('file', this.file);
+            
+            try {
+                const response = await fetch('/api/v1/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.fileId = data.file_id;
+                    this.sheets = data.sheets;
+                    this.selectedSheet = data.sheets[0];
+                    this.loadPreview();
+                } else {
+                    this.error = data.detail || 'Upload failed';
+                }
+            } catch (err) {
+                this.error = 'Network error: ' + err.message;
+            } finally {
+                this.uploading = false;
+                this.uploadProgress = 100;
+            }
+        },
+        
+        async loadPreview() {
+            try {
+                const response = await fetch(`/api/v1/preview/${this.fileId}?sheet=${encodeURIComponent(this.selectedSheet)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.preview = data;
+                }
+            } catch (err) {
+                console.error('Preview error:', err);
+            }
+        },
+        
+        async processFile() {
+            this.processing = true;
+            this.error = null;
+            this.result = null;
+            
+            const formData = new FormData();
+            formData.append('sheet', this.selectedSheet);
+            if (this.selectedStation) {
+                formData.append('station', this.selectedStation);
+            }
+            
+            try {
+                const response = await fetch(`/api/v1/process/${this.fileId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.result = data;
+                } else {
+                    this.error = data.detail || 'Processing failed';
+                }
+            } catch (err) {
+                this.error = 'Network error: ' + err.message;
+            } finally {
+                this.processing = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto" x-data="sheetSelector()">
+    
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">📋 Select Sheets to Process</h1>
+        <p class="mt-2 text-gray-600">Chọn sheets cần mapping cho từng file. Mặc định sẽ xử lý tất cả sheets.</p>
+    </div>
+    
+    <form action="/select-sheets" method="POST" class="space-y-6">
+        
+        {% for file in files %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <!-- File Header -->
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">📄</span>
+                        <div>
+                            <h3 class="font-semibold text-gray-900">{{ file.filename }}</h3>
+                            <p class="text-sm text-gray-500">{{ file.sheets | length }} sheets available</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Station Selection -->
+                    <div class="flex items-center space-x-2">
+                        <label class="text-sm text-gray-600">Station:</label>
+                        <select name="station_{{ file.file_id }}" 
+                                class="rounded-lg border-gray-300 text-sm focus:border-vj-red focus:ring-vj-red">
+                            {% for s in stations %}
+                            <option value="{{ s }}" {% if s == file.station %}selected{% endif %}>
+                                {{ s }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sheet Selection -->
+            <div class="p-6" x-data="{ mode: 'all' }">
+                
+                <!-- Selection Mode -->
+                <div class="flex items-center space-x-6 mb-4">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="mode_{{ file.file_id }}" value="all" 
+                               x-model="mode"
+                               class="text-vj-red focus:ring-vj-red">
+                        <span class="text-sm font-medium text-gray-700">
+                            🔄 Tất cả sheets ({{ file.sheets | length }})
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="mode_{{ file.file_id }}" value="specific" 
+                               x-model="mode"
+                               class="text-vj-red focus:ring-vj-red">
+                        <span class="text-sm font-medium text-gray-700">
+                            ✅ Chọn sheets cụ thể
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Sheet List (shown when specific mode) -->
+                <div x-show="mode === 'specific'" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 transform -translate-y-2"
+                     x-transition:enter-end="opacity-100 transform translate-y-0"
+                     class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg">
+                    
+                    {% for sheet in file.sheets %}
+                    <label class="flex items-center space-x-2 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors">
+                        <input type="checkbox" 
+                               name="sheet_{{ file.file_id }}_{{ sheet }}" 
+                               value="1"
+                               checked
+                               class="rounded text-vj-red focus:ring-vj-red">
+                        <span class="text-sm text-gray-700 truncate" title="{{ sheet }}">
+                            {{ sheet }}
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+                
+                <!-- Preview info when all selected -->
+                <div x-show="mode === 'all'" class="text-sm text-gray-500">
+                    <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded">
+                        ✓ Sẽ xử lý tất cả {{ file.sheets | length }} sheets
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Submit Buttons -->
+        <div class="flex justify-between items-center">
+            <a href="/upload" 
+               class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
+                ← Back to Upload
+            </a>
+            
+            <div class="flex space-x-4">
+                <button type="submit" 
+                        class="px-8 py-3 bg-vj-red hover:bg-vj-red-dark text-white font-medium rounded-lg transition-colors">
+                    Preview Mapping →
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function sheetSelector() {
+    return {
+        // Helper functions if needed
+    }
+}
+</script>
+{% endblock %}
+

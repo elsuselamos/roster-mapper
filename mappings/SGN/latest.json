@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "version": "20241205_150000",
+    "station": "SGN",
+    "created_at": "2024-12-05T15:00:00",
+    "created_by": "system",
+    "entry_count": 10,
+    "description": "Sample mappings for Tan Son Nhat (SGN)"
+  },
+  "mappings": {
+    "DT": "HC",
+    "DO": "HC",
+    "ML": "HC",
+    "PQC": "HC",
+    "BD1_O": "BD1",
+    "BD2_O": "BD2",
+    "BD3_O": "BD3",
+    "AL": "BD1",
+    "SIN": "B1",
+    "ICN": "B18"
+  }
+}
