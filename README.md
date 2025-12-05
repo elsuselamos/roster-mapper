@@ -10,7 +10,7 @@ Roster Mapper là công cụ hỗ trợ việc dịch các mã hoạt động (r
 
 - ✅ Upload file Excel (.xlsx, .xls)
 - ✅ Mapping mã theo từng station (SGN, HAN, DAD, ...)
-- ✅ Xử lý multi-code cells (B1/B19 → Nghỉ phép/Đào tạo)
+- ✅ Xử lý multi-code cells 
 - ✅ Longest-key-first matching (B19 được match trước B1)
 - ✅ Quản lý phiên bản mapping
 - ✅ API RESTful
