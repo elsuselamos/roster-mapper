@@ -2,7 +2,7 @@
 
 **Vietjet — Bộ phận Quản lý Bảo dưỡng**
 
-Ứng dụng chuyển đổi mã roster trong file Excel thành mô tả dễ hiểu.
+Ứng dụng chuyển đổi mã roster của các stattion trong file Excel thành code của HR.
 
 ## 📋 Mô tả
 
