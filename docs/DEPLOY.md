@@ -1,236 +1,286 @@
-# DEPLOY - Deployment Guide
+# 🚀 HƯỚNG DẪN TRIỂN KHAI - Roster Mapper v0.2.0
+
+> **Bộ phận**: Quản lý Bảo dưỡng (Maintenance Ops)  
+> **Trạng thái**: Phase 2 - HOÀN THÀNH  
+> **Phiên bản**: v0.2.0
 
 ---
 
-## 🐳 Docker Deployment
+## 📋 MỤC LỤC
 
-### Build & Run
-
-```bash
-cd /home/tiendat/Desktop/roster-mapper
-
-# Build image
-docker-compose build
-
-# Start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f web
-
-# Stop services
-docker-compose down
-```
-
-### Access URLs
-
-| Service | URL |
-|---------|-----|
-| Web UI | http://localhost:8000 |
-| API Docs | http://localhost:8000/docs |
-| Adminer | http://localhost:8080 (dev profile) |
-
-### With Dev Profile (Adminer)
-
-```bash
-docker-compose --profile dev up -d
-```
+1. [Chạy Local (Dev Mode)](#1-chạy-local-dev-mode)
+2. [Chạy bằng Docker](#2-chạy-bằng-docker)
+3. [CI/CD với Docker Hub](#3-cicd-với-docker-hub)
+4. [Triển khai Server nội bộ](#4-triển-khai-server-nội-bộ)
+5. [Cấu hình Environment](#5-cấu-hình-environment)
+6. [Troubleshooting](#6-troubleshooting)
 
 ---
 
-## 💻 Local Development
+## 1. CHẠY LOCAL (DEV MODE)
 
-### Prerequisites
-
+### Yêu cầu
 - Python 3.11+
 - pip
 
-### Setup
+### Các bước
 
 ```bash
-cd /home/tiendat/Desktop/roster-mapper
+# Clone repo
+git clone https://github.com/elsuselamos/roster-mapper.git
+cd roster-mapper
 
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+# Tạo virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# hoặc: .venv\Scripts\activate  # Windows
 
-# Install dependencies
+# Cài đặt dependencies
 pip install -r requirements.txt
 
-# Copy environment file
-cp .env.example .env
-# Edit .env as needed
-```
+# Chạy tests
+pytest -q
 
-### Run Development Server
-
-```bash
-# With auto-reload
+# Khởi động server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Or using Python directly
-python -m app.main
 ```
 
----
+### URLs
 
-## 🔧 Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `APP_NAME` | roster-mapper | Application name |
-| `APP_ENV` | development | Environment (development/production) |
-| `DEBUG` | true | Enable debug mode |
-| `LOG_LEVEL` | INFO | Logging level |
-| `HOST` | 0.0.0.0 | Server host |
-| `PORT` | 8000 | Server port |
-| `DATABASE_URL` | postgresql+asyncpg://... | Database connection |
-| `MAPPING_DIR` | ./mappings | Mapping files directory |
-| `STORAGE_DIR` | ./uploads | Upload storage directory |
-| `TEMP_DIR` | ./temp | Temporary files directory |
-| `AUTO_DETECT_STATION` | true | Auto-detect station from filename |
-| `SECRET_KEY` | change-me | Secret key for security |
+| Chức năng | URL |
+|-----------|-----|
+| Upload | http://localhost:8000/upload |
+| Select Sheets | http://localhost:8000/select-sheets |
+| Preview | http://localhost:8000/preview |
+| Admin Mapping | http://localhost:8000/admin |
+| Dashboard | http://localhost:8000/dashboard |
+| API Docs | http://localhost:8000/docs |
 
 ---
 
-## 📁 Volume Mounts
+## 2. CHẠY BẰNG DOCKER
 
-### Docker Compose
-
-```yaml
-volumes:
-  - ./mappings:/app/mappings    # Mapping files
-  - ./uploads:/app/uploads      # Uploaded files
-```
-
-### Important Directories
-
-| Directory | Purpose |
-|-----------|---------|
-| `mappings/` | Station mapping JSON files |
-| `uploads/` | Uploaded and processed files |
-| `temp/` | Temporary session files |
-| `templates/` | Jinja2 HTML templates |
-| `static/` | Static assets (CSS, JS) |
-
----
-
-## 🏥 Health Check
-
-### Endpoint
+### Build image
 
 ```bash
-curl http://localhost:8000/health
+# Build từ source
+docker build -f docker/Dockerfile -t roster-mapper:local .
 ```
 
-**Response:**
-```json
-{
-  "status": "healthy",
-  "service": "roster-mapper",
-  "version": "1.0.0"
-}
-```
-
-### Docker Health Check
-
-```yaml
-healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-```
-
----
-
-## 🔄 Updates
-
-### Update Mappings
-
-1. Prepare CSV/JSON file
-2. Go to Admin page: `/admin`
-3. Select station tab
-4. Click "Import" and upload file
-
-### Update Code
+### Chạy container
 
 ```bash
-# Pull latest
-git pull
+# Tạo folders cho volumes
+mkdir -p mappings uploads
 
-# Rebuild Docker
-docker-compose build --no-cache
+# Chạy với volumes
+docker run --rm -p 8000:8000 \
+  --env-file .env \
+  -v "$(pwd)/mappings":/data/mappings \
+  -v "$(pwd)/uploads":/data/uploads \
+  --name roster-mapper \
+  roster-mapper:local
+```
+
+### Docker Compose (Khuyến nghị)
+
+```bash
+# Khởi động tất cả services
 docker-compose up -d
-```
 
----
-
-## 📊 Monitoring
-
-### Logs
-
-```bash
-# Docker logs
+# Xem logs
 docker-compose logs -f web
 
-# Local logs (stdout)
-uvicorn app.main:app 2>&1 | tee app.log
+# Dừng
+docker-compose down
 ```
 
-### Dashboard
-
-Access `/dashboard` for:
-- Mapping counts per station
-- Activity charts
-- Recent actions
-
 ---
 
-## ⚠️ Production Checklist
+## 3. CI/CD VỚI DOCKER HUB
 
-- [ ] Set `APP_ENV=production`
-- [ ] Set `DEBUG=false`
-- [ ] Change `SECRET_KEY`
-- [ ] Configure proper `DATABASE_URL`
-- [ ] Set up SSL/TLS (nginx reverse proxy)
-- [ ] Configure backup for mappings/
-- [ ] Set up log rotation
-- [ ] Configure monitoring alerts
+### Cấu hình GitHub Secrets
 
----
+Vào repo GitHub → Settings → Secrets and variables → Actions
 
-## 🔧 Troubleshooting
+| Secret | Giá trị |
+|--------|---------|
+| `DOCKERHUB_USERNAME` | Tên tài khoản Docker Hub |
+| `DOCKERHUB_TOKEN` | Access Token từ Docker Hub |
 
-### Port Already in Use
+### Tạo Docker Hub Token
+
+1. Đăng nhập https://hub.docker.com
+2. Account Settings → Security → New Access Token
+3. Đặt tên: `roster-mapper-ci`
+4. Copy token và lưu vào GitHub Secrets
+
+### Workflow tự động
+
+File `.github/workflows/ci-dockerhub.yml` sẽ:
+
+1. ✅ Chạy tests khi có PR hoặc push
+2. ✅ Build Docker image
+3. ✅ Push lên Docker Hub với tags:
+   - `latest` (từ main/master)
+   - `<commit-sha>`
+   - `v0.2.0` (từ tag)
+
+### Trigger build
 
 ```bash
-# Find process
+# Push code → tự động build
+git push origin main
+
+# Tạo release → build với version tag
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+---
+
+## 4. TRIỂN KHAI SERVER NỘI BỘ
+
+### Option A: Pull từ Docker Hub
+
+```bash
+# Pull image mới nhất
+docker pull YOUR_DOCKERHUB_USERNAME/roster-mapper:latest
+
+# Chạy
+docker run -d -p 8000:8000 \
+  --env-file .env \
+  -v /path/to/mappings:/data/mappings \
+  -v /path/to/uploads:/data/uploads \
+  --restart unless-stopped \
+  --name roster-mapper \
+  YOUR_DOCKERHUB_USERNAME/roster-mapper:latest
+```
+
+### Option B: Build trực tiếp trên server
+
+```bash
+git clone https://github.com/elsuselamos/roster-mapper.git
+cd roster-mapper
+docker-compose up -d --build
+```
+
+### Systemd Service (Linux)
+
+Tạo file `/etc/systemd/system/roster-mapper.service`:
+
+```ini
+[Unit]
+Description=Roster Mapper Service
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/roster-mapper
+ExecStart=/usr/bin/docker-compose up
+ExecStop=/usr/bin/docker-compose down
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable roster-mapper
+sudo systemctl start roster-mapper
+```
+
+---
+
+## 5. CẤU HÌNH ENVIRONMENT
+
+### File `.env`
+
+```bash
+# App Settings
+APP_NAME=roster-mapper
+APP_ENV=production
+DEBUG=false
+HOST=0.0.0.0
+PORT=8000
+
+# Paths
+MAPPING_DIR=/data/mappings
+STORAGE_DIR=/data/uploads
+TEMP_DIR=/data/temp
+
+# Database (optional - dùng SQLite mặc định)
+# DATABASE_URL=postgresql://user:pass@localhost:5432/roster_mapper
+
+# CORS
+CORS_ORIGINS=["http://localhost:8000","http://your-server-ip:8000"]
+
+# Auto-detect station từ filename
+AUTO_DETECT_STATION=true
+```
+
+### Volumes quan trọng
+
+| Volume | Mục đích |
+|--------|----------|
+| `/data/mappings` | Chứa JSON mapping files |
+| `/data/uploads` | Chứa uploaded & processed files |
+| `/data/temp` | Session data tạm thời |
+
+---
+
+## 6. TROUBLESHOOTING
+
+### Lỗi thường gặp
+
+#### Container không start
+```bash
+# Kiểm tra logs
+docker logs roster-mapper
+
+# Kiểm tra port đã dùng chưa
 lsof -i :8000
-
-# Kill process
-kill -9 <PID>
 ```
 
-### Database Connection Error
-
+#### Permission denied với volumes
 ```bash
-# Check PostgreSQL
-docker-compose ps db
-
-# Restart database
-docker-compose restart db
+# Fix permissions
+sudo chown -R 1000:1000 mappings uploads
 ```
 
-### Import Error
+#### Tests fail
+```bash
+# Chạy với verbose
+pytest -v --tb=long
 
-- Check file format (CSV: from,to columns)
-- Check encoding (UTF-8)
-- Check for duplicate codes
+# Chạy test cụ thể
+pytest tests/test_mapper.py -v
+```
 
-### Missing Mappings
+#### Import mapping lỗi
+- Kiểm tra JSON format đúng chuẩn
+- Đảm bảo encoding UTF-8
+- Xem logs: `docker logs roster-mapper`
 
-- Verify mapping file exists: `mappings/{station}/latest.json`
-- Check file format and JSON validity
-- Reload station in Admin page
+---
 
+## 📝 LƯU Ý QUAN TRỌNG
+
+1. **KHÔNG CÓ AUTHENTICATION** - Tất cả users đều truy cập được
+2. **Mapping versioning** - Mọi thay đổi mapping được lưu lịch sử
+3. **User = "anonymous"** - Chờ Phase 3 để thêm auth
+4. **Backup định kỳ** - Backup folder `mappings/` và `uploads/`
+
+---
+
+## 🔗 Links
+
+- **Repo**: https://github.com/elsuselamos/roster-mapper
+- **Docker Hub**: (sau khi setup) https://hub.docker.com/r/YOUR_USERNAME/roster-mapper
+- **API Docs**: http://localhost:8000/docs
+
+---
+
+*Last updated: December 2024 - Phase 2 Release*
