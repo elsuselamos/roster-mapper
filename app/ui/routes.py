@@ -353,18 +353,18 @@ async def process_files(request: Request):
             
             # Aggregate stats from styled processing
             for sheet_name, stats in styled_stats.items():
-                    total_stats["total_cells"] += stats.get("total_cells", 0)
-                    total_stats["mapped_cells"] += stats.get("mapped_cells", 0)
+                total_stats["total_cells"] += stats.get("total_cells", 0)
+                total_stats["mapped_cells"] += stats.get("mapped_cells", 0)
                 total_stats["unmapped_cells"] += stats.get("unchanged_cells", 0)
                 total_stats["empty_cells"] += stats.get("empty_cells", 0)
-                    total_stats["sheets_processed"] += 1
-                    
-                    sheet_results.append({
+                total_stats["sheets_processed"] += 1
+                
+                sheet_results.append({
                     "sheet": sheet_name,
                     "rows": stats.get("total_cells", 0),
-                        "mapped": stats.get("mapped_cells", 0),
+                    "mapped": stats.get("mapped_cells", 0),
                     "unmapped": stats.get("unchanged_cells", 0)
-                    })
+                })
                     
             # ========== FORMAT 2: PLAIN (text only, no formatting) ==========
             # Use DataFrame approach for clean text output
@@ -383,15 +383,15 @@ async def process_files(request: Request):
                     mapped_sheets
                 )
                 
-                results.append({
-                    "file_id": file_info["file_id"],
-                    "filename": file_info["filename"],
-                    "station": file_info["station"],
-                    "stats": total_stats,
-                    "sheet_results": sheet_results,
+            results.append({
+                "file_id": file_info["file_id"],
+                "filename": file_info["filename"],
+                "station": file_info["station"],
+                "stats": total_stats,
+                "sheet_results": sheet_results,
                 "download_url_styled": f"/api/v1/download/{file_info['file_id']}?format=styled",
                 "download_url_plain": f"/api/v1/download/{file_info['file_id']}?format=plain"
-                })
+            })
                 
         except Exception as e:
             logger.error(f"Processing error: {e}")
