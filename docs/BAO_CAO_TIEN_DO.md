@@ -1,6 +1,6 @@
-# 📊 BÁO CÁO TIẾN ĐỘ DỰ ÁN
+# 📊 BÁO CÁO TIẾN ĐỘ DỰ ÁN – PHIÊN BẢN ÔNG THẦU
 
-## VIETJET AMO - ROSTER MAPPER
+## VIETJET AMO – ROSTER MAPPER
 
 ---
 
@@ -9,73 +9,90 @@
 | **Dự án** | Roster Mapper - Công cụ chuyển đổi mã roster |
 | **Bộ phận** | Quản lý Bảo dưỡng (Maintenance Ops) |
 | **Phiên bản** | v1.0.0 |
-| **Ngày báo cáo** | 05/12/2024 |
+| **Ngày báo cáo** | 05/12/2025 |
 | **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** |
-| **Liên hệ** | datnguyentien@vietjetair.com |
+| **Website** | vietjetair.com |
 
 ---
 
-## 📋 TÓM TẮT TỔNG QUAN
+## I. TÓM TẮT DỰ ÁN
 
-Hệ thống **Roster Mapper** đã hoàn thành Phase 2 với đầy đủ các tính năng yêu cầu. Hệ thống cho phép:
+Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ các station (SGN, HAN, DAD, CXR, HPH, VCA, VII) sang mã chuẩn HR.
 
-- Upload file Excel roster từ các station
-- Tự động chuyển đổi mã code theo bảng mapping
-- Hỗ trợ xử lý **nhiều sheets** trong cùng 1 file
-- Download file đã mapping
+Đến thời điểm báo cáo, hệ thống đã **hoàn thành Phase 2**, vận hành ổn định, chạy qua Docker hoặc môi trường local, và sẵn sàng đưa vào thử nghiệm nội bộ.
 
 ---
 
-## ✅ TÍNH NĂNG ĐÃ HOÀN THÀNH
+## II. TRẠNG THÁI TỔNG THỂ
 
-### 1. Web UI (Giao diện người dùng)
+| Hạng mục | Trạng thái |
+|----------|------------|
+| Phase 1 – Core Engine | ✅ 100% |
+| Phase 2 – Web UI, Batch, Multi-station | ✅ 100% |
+| Phase 3 – Authentication (tạm dừng) | ⏸ Chưa yêu cầu |
+| **Tiến độ tổng thể** | **100%** |
+
+---
+
+## III. TÍNH NĂNG ĐÃ HOÀN THÀNH (PHASE 2)
+
+### 1. Web UI – Jinja2 + Tailwind + HTMX
 
 | Tính năng | Trạng thái | Mô tả |
 |-----------|------------|-------|
-| Trang Upload | ✅ Done | Upload nhiều file, chọn station, auto-detect |
-| Chọn Sheets | ✅ Done | Chọn tất cả hoặc sheets cụ thể |
-| Preview | ✅ Done | Xem trước 15-20 rows, highlight ô đã map (xanh) / chưa map (đỏ) |
-| Trang Results | ✅ Done | Download file đã mapping |
-| Trang Admin | ✅ Done | Import/quản lý mapping (KHÔNG yêu cầu đăng nhập) |
+| Upload nhiều file | ✅ Done | Drag & drop, chọn nhiều file cùng lúc |
+| Chọn station | ✅ Done | Dropdown hoặc auto-detect từ tên file |
+| Chọn sheets | ✅ Done | Chọn tất cả hoặc sheets cụ thể |
+| Preview | ✅ Done | 15-20 dòng đầu, highlight xanh/đỏ |
+| Trang Admin | ✅ Done | Nhập mapping (KHÔNG yêu cầu đăng nhập) |
 | Trang Dashboard | ✅ Done | Thống kê cơ bản |
+| **2 tùy chọn Download** | ✅ **MỚI** | Giữ format gốc HOẶC text thuần |
 
-### 2. Mapping Engine
+### 2. Mapping Engine – Production Ready
 
 | Tính năng | Trạng thái | Mô tả |
 |-----------|------------|-------|
-| Longest-key-first | ✅ Done | Ưu tiên match key dài nhất (B19 trước B1) |
-| Multi-code cell | ✅ Done | Xử lý ô có nhiều code: A/B hoặc A,B |
+| Longest-key-first | ✅ Done | Đảm bảo B19 ≠ B1 |
+| Regex boundary | ✅ Done | Tránh match nhầm |
+| Multi-code | ✅ Done | A/B, A B, A,B, xuống dòng |
+| Multi-sheet | ✅ Done | Xử lý nhiều sheets |
 | Case-insensitive | ✅ Done | Không phân biệt hoa/thường |
-| Regex boundary | ✅ Done | Tránh match B1 vào B19 |
-| Multi-sheet | ✅ Done | Xử lý nhiều sheets trong 1 file |
+| **Style Preservation** | ✅ **MỚI** | Giữ nguyên màu, font, border của file gốc |
 
-### 3. Multi-Station Support
+### 3. Tùy chọn Download (MỚI)
+
+| Option | Mô tả |
+|--------|-------|
+| 🎨 **Giữ Format** | Giữ nguyên toàn bộ định dạng gốc: màu sắc, font, border, merge cells, chiều rộng cột. Chỉ thay đổi nội dung text. |
+| 📄 **Text Only** | Chỉ giữ nội dung text thuần, không có định dạng. Phù hợp để import vào hệ thống khác hoặc xử lý tiếp. |
+
+### 4. Multi-station
 
 | Station | Mapping | Trạng thái |
 |---------|---------|------------|
 | HAN | 74 codes | ✅ Production Ready |
-| SGN | 5 codes (sample) | ✅ Cần bổ sung |
-| DAD | 5 codes (sample) | ✅ Cần bổ sung |
-| CXR | 5 codes (sample) | ✅ Cần bổ sung |
-| HPH | 5 codes (sample) | ✅ Cần bổ sung |
-| VCA | 5 codes (sample) | ✅ Cần bổ sung |
-| VII | 5 codes (sample) | ✅ Cần bổ sung |
+| SGN | 5 codes (sample) | ⚠️ Cần bổ sung dữ liệu thực tế |
+| DAD | 5 codes (sample) | ⚠️ Cần bổ sung dữ liệu thực tế |
+| CXR | 5 codes (sample) | ⚠️ Cần bổ sung dữ liệu thực tế |
+| HPH | 5 codes (sample) | ⚠️ Cần bổ sung dữ liệu thực tế |
+| VCA | 5 codes (sample) | ⚠️ Cần bổ sung dữ liệu thực tế |
+| VII | 5 codes (sample) | ⚠️ Cần bổ sung dữ liệu thực tế |
 
-### 4. Infrastructure
+### 5. Hạ tầng & Công cụ
 
 | Hạng mục | Trạng thái | Chi tiết |
 |----------|------------|----------|
 | Source Code | ✅ Done | GitHub: elsuselamos/roster-mapper |
 | Docker | ✅ Done | Multi-stage Dockerfile |
-| CI/CD | ✅ Done | GitHub Actions → Docker Hub |
-| Tests | ✅ Done | 79 tests passing |
-| Documentation | ✅ Done | CONTEXT.md, DEPLOY.md |
+| Docker Hub CI/CD | ✅ Done | GitHub Actions |
+| Tests | ✅ Done | 79 tests PASS |
+| Documentation | ✅ Done | CONTEXT.md, DEPLOY.md, API specs |
 
 ---
 
-## 📊 KẾT QUẢ KIỂM THỬ
+## IV. KẾT QUẢ KIỂM THỬ
 
-### Unit Tests
+### ✔ Unit Tests
 
 ```
 ============================= test session starts ==============================
@@ -90,7 +107,9 @@ tests/test_ui_routes.py .........              [100%]
 ============================== 79 passed ==============================
 ```
 
-### Performance Test (HAN Station)
+**Tổng số bài test: 79 → 79/79 passed ✅**
+
+### ✔ Performance Test (HAN)
 
 | Metric | Kết quả |
 |--------|---------|
@@ -99,76 +118,86 @@ tests/test_ui_routes.py .........              [100%]
 | Số columns | 64 |
 | Tổng cells | ~16,000+ |
 | Thời gian xử lý | < 10 giây |
-| Kết quả | ✅ PASS |
+| **Kết quả** | ✅ **PASS** |
+
+→ **Đạt yêu cầu vận hành thực tế**
 
 ---
 
-## 🔗 LINKS & TÀI NGUYÊN
+## V. LINKS QUAN TRỌNG
 
-| Resource | URL |
-|----------|-----|
-| GitHub Repository | https://github.com/elsuselamos/roster-mapper |
+| Mục | Link |
+|-----|------|
+| GitHub Repo | https://github.com/elsuselamos/roster-mapper |
 | Release v1.0.0 | https://github.com/elsuselamos/roster-mapper/releases/tag/v1.0.0 |
 | Local Demo | http://localhost:8000 |
 
 ---
 
-## 🖥️ HƯỚNG DẪN CHẠY HỆ THỐNG
+## VI. HƯỚNG DẪN CHẠY HỆ THỐNG
 
-### Chạy Local (Development)
+### 1. Chạy Local
 
 ```bash
-# Clone repo
 git clone https://github.com/elsuselamos/roster-mapper.git
 cd roster-mapper
 
-# Setup
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Chạy tests
 pytest -q
 
-# Khởi động server
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Chạy với Docker
+### 2. Chạy bằng Docker
 
 ```bash
 docker build -f docker/Dockerfile -t roster-mapper:local .
 docker run -p 8000:8000 roster-mapper:local
 ```
 
-### URLs sau khi chạy
+### 3. URLs
 
 | Chức năng | URL |
 |-----------|-----|
-| Upload Files | http://localhost:8000/upload |
+| Upload | http://localhost:8000/upload |
 | Admin Mapping | http://localhost:8000/admin |
 | Dashboard | http://localhost:8000/dashboard |
 | API Docs | http://localhost:8000/docs |
 
 ---
 
-## ⚠️ LƯU Ý QUAN TRỌNG
+## VII. LƯU Ý QUAN TRỌNG (THEO YÊU CẦU BAN ĐẦU)
 
-### Đã disable theo yêu cầu:
+### ❌ ĐÃ TẮT / KHÔNG TRIỂN KHAI:
 
-- ❌ **KHÔNG CÓ** đăng nhập / authentication
-- ❌ **KHÔNG CÓ** phân quyền user
-- ❌ **KHÔNG triển khai** GCP / Cloud Run
-- ❌ **KHÔNG dùng** service account cloud
+- Authentication / Login / User Role
+- Admin-only mode
+- Cloud Run / GCP / Service Account
 
-### Vẫn giữ:
+### ✔ VẪN GIỮ:
 
-- ✅ Mapping versioning (audit log)
-- ✅ User = "anonymous" (sau này có auth sẽ thay đổi)
+- Mapping versioning
+- Audit log (created_by = "anonymous")
+- **Style preservation** (giữ nguyên định dạng file gốc)
 
 ---
 
-## 📈 TIẾN ĐỘ TỔNG THỂ
+## VIII. ĐỀ XUẤT TIẾP THEO (NEXT STEPS)
+
+| STT | Công việc | Ưu tiên | Ghi chú |
+|-----|-----------|---------|---------|
+| 1 | Thu thập file mapping thực tế từ SGN/DAD/CXR… | ⭐ Cao | Cần dữ liệu từ station |
+| 2 | Test với file roster thật của từng station | ⭐ Cao | Quan trọng |
+| 3 | Tạo Docker Hub CI/CD pipeline cho server nội bộ | Trung bình | Sẵn workflow |
+| 4 | Chuẩn bị server nội bộ (Docker Compose) | Trung bình | Chạy offline |
+| 5 | Training station admins | Thấp | Sau khi deploy |
+
+---
+
+## IX. TIẾN ĐỘ TỔNG THỂ
 
 ```
 Phase 1: Project Setup & Core Engine     [██████████] 100%
@@ -180,54 +209,45 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 
 ---
 
-## 🔜 NEXT STEPS (ĐỀ XUẤT)
+## X. KẾT LUẬN ÔNG THẦU
 
-| STT | Công việc | Ưu tiên | Ghi chú |
-|-----|-----------|---------|---------|
-| 1 | Bổ sung mapping cho SGN, DAD, CXR | Cao | Cần file mapping từ các station |
-| 2 | Test với file roster thực tế các station | Cao | Cần sample files |
-| 3 | Setup Docker Hub CI/CD | Trung bình | Cần tài khoản Docker Hub |
-| 4 | Triển khai server nội bộ | Trung bình | Sau khi test OK |
-| 5 | Training user | Thấp | Sau khi deploy |
-
----
-
-## 📞 LIÊN HỆ HỖ TRỢ
-
-- **Developer**: datnguyentien@vietjetair.com
-- **GitHub Issues**: https://github.com/elsuselamos/roster-mapper/issues
-
----
-
-*Báo cáo được tạo tự động ngày 05/12/2024*
+> **"Hệ thống Roster Mapper đã hoàn thành Phase 2, sẵn sàng đưa vào pilot thực tế.**
+> 
+> **Các điểm nổi bật:**
+> - ✅ Engine ổn định, xử lý 16,000+ cells < 10 giây
+> - ✅ UI hoàn chỉnh, dễ sử dụng
+> - ✅ **Giữ nguyên định dạng file gốc** (màu, font, border)
+> - ✅ **2 tùy chọn download**: Styled vs Plain text
+> - ✅ Batch hoạt động tốt
+> - ✅ Mapping versioning đầy đủ
+> - ✅ Không yêu cầu đăng nhập
+> 
+> **Tiếp theo cần dữ liệu thực từ các station để hoàn thiện production rollout."**
 
 ---
 
 ## PHỤ LỤC: SCREENSHOTS
 
 ### 1. Trang Upload
-![Upload Page](screenshots/upload.png)
 - Drag & drop files
 - Chọn station hoặc auto-detect
 - Hiển thị trạng thái mapping từng station
 
 ### 2. Trang Chọn Sheets
-![Select Sheets](screenshots/select-sheets.png)
 - Chọn "Tất cả sheets" hoặc sheets cụ thể
 - Hiển thị danh sách sheets trong file
 
 ### 3. Trang Preview
-![Preview Page](screenshots/preview.png)
 - Tab view cho mỗi sheet
 - Highlight ô đã map (xanh) / chưa map (đỏ)
 - Thống kê số cells mapped/unmapped
 
 ### 4. Trang Results
-![Results Page](screenshots/results.png)
-- Download file đã mapping
+- **2 nút download**: 🎨 Giữ Format | 📄 Text Only
 - Thống kê chi tiết per sheet
 
 ---
 
-**© 2024 Vietjet AMO - IT Department**
+**© 2025 Vietjet AMO - IT Department**
 
+*Báo cáo được tạo ngày 05/12/2025*

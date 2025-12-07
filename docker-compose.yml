@@ -17,8 +17,8 @@ services:
       POSTGRES_DB: roster_mapper
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"  # Không cần expose ra ngoài, web kết nối qua internal network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d roster_mapper"]
       interval: 10s
