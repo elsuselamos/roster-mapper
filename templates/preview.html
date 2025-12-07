@@ -13,7 +13,10 @@
             <a href="/select-sheets" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
                 ← Chọn lại sheets
             </a>
-            <form action="/process" method="POST" class="inline">
+            <form action="/process" method="POST" class="inline"
+                  data-loading
+                  data-loading-text="⚙️ Đang mapping..."
+                  data-loading-subtext="Đang chuyển đổi mã code, giữ nguyên định dạng file">
                 <button type="submit" class="px-6 py-2 bg-vj-red hover:bg-vj-red-dark text-white font-medium rounded-lg transition-colors">
                     ✅ Start Mapping
                 </button>
@@ -178,7 +181,10 @@
         <a href="/select-sheets" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
             ← Chọn lại sheets
         </a>
-        <form action="/process" method="POST" class="inline">
+        <form action="/process" method="POST" class="inline"
+              data-loading
+              data-loading-text="⚙️ Đang mapping {{ total_sheets }} sheets..."
+              data-loading-subtext="Đang chuyển đổi mã code và giữ nguyên định dạng file gốc">
             <button type="submit" class="px-8 py-3 bg-vj-red hover:bg-vj-red-dark text-white font-semibold rounded-lg transition-colors shadow-lg">
                 ✅ Xác nhận & Start Mapping ({{ total_sheets }} sheets)
             </button>

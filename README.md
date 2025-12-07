@@ -6,13 +6,17 @@
 
 ## 📋 Mô tả
 
-Roster Mapper là công cụ hỗ trợ việc dịch các mã hoạt động (roster codes) trong bảng phân công nhân sự thành các mô tả có ý nghĩa. Hệ thống hỗ trợ:
+Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt động (roster codes) trong bảng phân công nhân sự sang mã chuẩn HR. Hệ thống hỗ trợ:
 
 - ✅ Upload file Excel (.xlsx, .xls)
-- ✅ Mapping mã theo từng station (SGN, HAN, DAD, ...)
-- ✅ Xử lý multi-code cells 
+- ✅ Mapping mã theo từng station (SGN, HAN, DAD, CXR, HPH, VCA, VII)
+- ✅ Xử lý multi-code cells (A/B, A,B, A B)
 - ✅ Longest-key-first matching (B19 được match trước B1)
+- ✅ **Xử lý nhiều sheets** trong cùng 1 file
+- ✅ **Giữ nguyên định dạng** (màu sắc, font, border) của file gốc
+- ✅ **2 tùy chọn download**: Giữ format gốc hoặc Text only
 - ✅ Quản lý phiên bản mapping
+- ✅ Web UI thân thiện (Tailwind + HTMX)
 - ✅ API RESTful
 
 ## 🚀 Cài đặt & Chạy
@@ -51,6 +55,23 @@ Truy cập:
 
 ### Cách 2: Chạy với Docker Compose
 
+#### Bước 1: Chuẩn bị thư mục và phân quyền
+
+```bash
+# Clone repository
+git clone https://github.com/elsuselamos/roster-mapper.git
+cd roster-mapper
+
+# Tạo các thư mục cần thiết
+mkdir -p uploads/uploads uploads/processed uploads/temp
+
+# Phân quyền cho container (container chạy với uid 1000)
+sudo chown -R 1000:1000 uploads/ mappings/
+sudo chmod -R 755 uploads/ mappings/
+```
+
+#### Bước 2: Build và chạy
+
 ```bash
 # Build và khởi động
 docker-compose up -d --build
@@ -58,13 +79,41 @@ docker-compose up -d --build
 # Xem logs
 docker-compose logs -f web
 
-# Dừng services
+# Kiểm tra status
+docker-compose ps
+```
+
+#### Bước 3: Xử lý lỗi thường gặp
+
+**Lỗi "Permission denied":**
+```bash
+# Chạy lại lệnh phân quyền
+sudo chown -R 1000:1000 uploads/ mappings/
+docker-compose restart web
+```
+
+**Lỗi "Port 5432 already in use":**
+```bash
+# PostgreSQL port bị conflict, sửa docker-compose.yml
+# Comment dòng ports của service db (không cần expose ra ngoài)
+```
+
+#### Bước 4: Dừng services
+
+```bash
+# Dừng
 docker-compose down
+
+# Dừng và xóa volumes (reset database)
+docker-compose down -v
 ```
 
 Truy cập:
-- API: http://localhost:8000
-- Adminer (DB Admin): http://localhost:8080 (profile: dev)
+- Web UI: http://localhost:8000/upload
+- API Docs: http://localhost:8000/docs
+- Admin: http://localhost:8000/admin
+- Dashboard: http://localhost:8000/dashboard
+- Adminer (DB Admin): http://localhost:8080 (chỉ với profile: dev)
 
 ## ⚙️ Cấu hình Environment
 
@@ -195,12 +244,48 @@ curl -X POST "http://localhost:8000/api/v1/admin/mappings/import-csv?station=SGN
   -F "file=@mappings.csv"
 ```
 
+## 🚀 Production Deployment
+
+### Deploy lên server mới
+
+```bash
+# 1. Clone repo
+git clone https://github.com/elsuselamos/roster-mapper.git
+cd roster-mapper
+
+# 2. Tạo thư mục và phân quyền
+mkdir -p uploads/uploads uploads/processed uploads/temp
+sudo chown -R 1000:1000 uploads/ mappings/
+sudo chmod -R 755 uploads/ mappings/
+
+# 3. Build và chạy
+docker-compose up -d --build
+
+# 4. Kiểm tra
+docker-compose logs -f web
+curl http://localhost:8000/health
+```
+
+### Cập nhật phiên bản mới
+
+```bash
+cd roster-mapper
+git pull
+docker-compose down
+docker-compose up -d --build
+```
+
 ## 👤 Author
 
-**Dat Nguyen Tien**  
-Email: datnguyentien@vietjetair.com
+**Vietjet AMO - IT Department**  
+Website: [vietjetair.com](https://www.vietjetair.com)
 
 ## 📄 License
 
 Internal use only - Vietjet Aviation Joint Stock Company
+
+---
+
+**Version**: 1.0.0  
+**Last Updated**: December 2025
 

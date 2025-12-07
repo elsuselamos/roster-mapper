@@ -9,7 +9,10 @@
         <p class="mt-2 text-gray-600">Chọn sheets cần mapping cho từng file. Mặc định sẽ xử lý tất cả sheets.</p>
     </div>
     
-    <form action="/select-sheets" method="POST" class="space-y-6">
+    <form action="/select-sheets" method="POST" class="space-y-6"
+          data-loading
+          data-loading-text="👁️ Đang tạo preview..."
+          data-loading-subtext="Đang phân tích và tạo preview cho các sheets đã chọn">
         
         {% for file in files %}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

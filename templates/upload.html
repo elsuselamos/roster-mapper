@@ -15,7 +15,10 @@
     </div>
     {% endif %}
     
-    <form action="/upload" method="POST" enctype="multipart/form-data" class="space-y-6">
+    <form action="/upload" method="POST" enctype="multipart/form-data" class="space-y-6"
+          data-loading
+          data-loading-text="📤 Đang upload files..."
+          data-loading-subtext="Đang đọc và phân tích file Excel của bạn">
         
         <!-- Station Selection -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
