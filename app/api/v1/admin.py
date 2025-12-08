@@ -6,6 +6,7 @@ Administrative endpoints for mapping management.
 Author: datnguyentien@vietjetair.com
 """
 
+import json
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -123,41 +124,88 @@ async def import_mappings(
 
 
 @router.post("/mappings/import-csv", response_model=MappingImportResponse)
-async def import_mappings_csv(
-    file: UploadFile = File(..., description="CSV file with code,description columns"),
+async def import_mappings_file(
+    file: UploadFile = File(..., description="CSV, JSON, or Excel file with mappings"),
     station: str = Query(..., description="Station code"),
     replace_existing: bool = Query(False, description="Replace existing mappings")
 ) -> MappingImportResponse:
     """
-    Import mappings from a CSV file.
+    Import mappings from a file (CSV, JSON, or Excel).
     
-    CSV should have columns: code, description (with optional category).
+    Supported formats:
+    - CSV: columns 'from'/'to' or 'code'/'description'
+    - JSON: {"FROM_CODE": "TO_CODE", ...}
+    - Excel: First two columns are From and To codes
     """
-    logger.info("CSV mapping import started", station=station, filename=file.filename)
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
     
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must be a CSV")
+    filename_lower = file.filename.lower()
+    logger.info("Mapping file import started", station=station, filename=file.filename)
     
     try:
-        import csv
-        from io import StringIO
-        
-        # Read CSV content
         content = await file.read()
-        text_content = content.decode("utf-8")
-        
-        reader = csv.DictReader(StringIO(text_content))
-        
         mapping_dict = {}
-        for row in reader:
-            code = row.get("code", "").strip()
-            description = row.get("description", "").strip()
+        
+        # ========== CSV ==========
+        if filename_lower.endswith(".csv"):
+            import csv
+            from io import StringIO
             
-            if code and description:
-                mapping_dict[code] = description
+            text_content = content.decode("utf-8")
+            reader = csv.DictReader(StringIO(text_content))
+            
+            for row in reader:
+                # Support both 'from'/'to' and 'code'/'description' column names
+                from_code = row.get("from", row.get("code", row.get("FROM", row.get("Code", "")))).strip()
+                to_code = row.get("to", row.get("description", row.get("TO", row.get("Description", "")))).strip()
+                
+                if from_code and to_code:
+                    mapping_dict[from_code] = to_code
+        
+        # ========== JSON ==========
+        elif filename_lower.endswith(".json"):
+            import json
+            
+            text_content = content.decode("utf-8")
+            data = json.loads(text_content)
+            
+            # Handle both formats: {"mappings": {...}} or direct {...}
+            if isinstance(data, dict):
+                if "mappings" in data:
+                    mapping_dict = data["mappings"]
+                else:
+                    # Filter out metadata keys starting with '_'
+                    mapping_dict = {k: v for k, v in data.items() if not k.startswith("_")}
+        
+        # ========== Excel ==========
+        elif filename_lower.endswith((".xlsx", ".xls")):
+            import pandas as pd
+            from io import BytesIO
+            
+            df = pd.read_excel(BytesIO(content), header=None)
+            
+            # Use first two columns as from/to
+            if len(df.columns) >= 2:
+                for idx, row in df.iterrows():
+                    from_code = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ""
+                    to_code = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else ""
+                    
+                    # Skip header row if it looks like headers
+                    if idx == 0 and from_code.lower() in ["from", "code", "from_code", "mã gốc"]:
+                        continue
+                    
+                    if from_code and to_code:
+                        mapping_dict[from_code] = to_code
+        
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail="Unsupported file format. Use CSV, JSON, or Excel (.xlsx/.xls)"
+            )
         
         if not mapping_dict:
-            raise HTTPException(status_code=400, detail="No valid mappings found in CSV")
+            raise HTTPException(status_code=400, detail="No valid mappings found in file")
         
         # Save mapping
         storage = StorageService()
@@ -168,15 +216,16 @@ async def import_mappings_csv(
         )
         
         logger.info(
-            "CSV mapping import completed",
+            "Mapping file import completed",
             station=station,
             version=version,
-            count=len(mapping_dict)
+            count=len(mapping_dict),
+            file_type=filename_lower.split(".")[-1]
         )
         
         return MappingImportResponse(
             success=True,
-            message=f"Successfully imported {len(mapping_dict)} mappings from CSV",
+            message=f"Successfully imported {len(mapping_dict)} mappings",
             station=station,
             imported_count=len(mapping_dict),
             version=version
@@ -184,9 +233,12 @@ async def import_mappings_csv(
         
     except HTTPException:
         raise
+    except json.JSONDecodeError as e:
+        logger.error("JSON parse error", error=str(e), station=station)
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format: {str(e)}")
     except Exception as e:
-        logger.error("CSV import failed", error=str(e), station=station)
-        raise HTTPException(status_code=500, detail=f"CSV import failed: {str(e)}")
+        logger.error("File import failed", error=str(e), station=station)
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
 
 
 @router.get("/mappings/{station}", response_model=MappingExportResponse)
