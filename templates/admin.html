@@ -1,7 +1,68 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="adminApp()">
+    
+    <!-- Import Modal -->
+    <div x-show="showImportModal" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-black/50" @click="closeImportModal()"></div>
+            
+            <!-- Modal Content -->
+            <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 z-10">
+                <div x-show="!isUploading">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">📥 Import Mapping</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-1">Station:</p>
+                            <p class="font-semibold text-vj-red" x-text="importStation"></p>
+                        </div>
+                        
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-1">File:</p>
+                            <p class="font-medium text-blue-700" x-text="importFileName"></p>
+                            <p class="text-xs text-gray-500 mt-1" x-text="importFileSize"></p>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" id="replaceExisting" x-model="replaceExisting"
+                                   class="rounded text-vj-red focus:ring-vj-red">
+                            <label for="replaceExisting" class="text-sm text-gray-700">
+                                Thay thế toàn bộ mapping hiện tại
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button @click="closeImportModal()"
+                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">
+                            Hủy
+                        </button>
+                        <button @click="confirmImport()"
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                            ✅ Xác nhận Import
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="isUploading" class="text-center py-8">
+                    <div class="spinner mx-auto mb-4"></div>
+                    <p class="text-gray-700 font-medium">Đang import mapping...</p>
+                    <p class="text-sm text-gray-500 mt-1">Vui lòng đợi</p>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Header -->
     <div class="flex justify-between items-center">
@@ -45,18 +106,10 @@
                     
                     <div class="flex space-x-3">
                         <!-- Import Button -->
-                        <button @click="$refs.importFile{{ station.code }}.click()"
+                        <button @click="openImportModal('{{ station.code }}')"
                                 class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
                             📥 Import
                         </button>
-                        <input type="file" x-ref="importFile{{ station.code }}" 
-                               accept=".csv,.json,.xlsx"
-                               class="hidden"
-                               hx-post="/api/v1/admin/mappings/import-csv?station={{ station.code }}"
-                               hx-encoding="multipart/form-data"
-                               hx-trigger="change"
-                               hx-swap="none"
-                               hx-on::after-request="window.location.reload()">
                         
                         <!-- Export Button -->
                         <a href="/api/v1/admin/mappings/{{ station.code }}" target="_blank"
@@ -148,6 +201,89 @@ TR,TR</pre>
             </div>
         </div>
     </div>
+    <!-- Hidden File Input -->
+    <input type="file" id="importFileInput" 
+           accept=".csv,.json,.xlsx,.xls"
+           class="hidden"
+           @change="handleFileSelect($event)">
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function adminApp() {
+    return {
+        showImportModal: false,
+        isUploading: false,
+        importStation: '',
+        importFileName: '',
+        importFileSize: '',
+        importFile: null,
+        replaceExisting: false,
+        
+        openImportModal(station) {
+            this.importStation = station;
+            this.replaceExisting = false;
+            document.getElementById('importFileInput').click();
+        },
+        
+        handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            this.importFile = file;
+            this.importFileName = file.name;
+            this.importFileSize = this.formatFileSize(file.size);
+            this.showImportModal = true;
+            
+            // Reset file input
+            event.target.value = '';
+        },
+        
+        closeImportModal() {
+            this.showImportModal = false;
+            this.importFile = null;
+            this.isUploading = false;
+        },
+        
+        async confirmImport() {
+            if (!this.importFile) return;
+            
+            this.isUploading = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                
+                const url = `/api/v1/admin/mappings/import-csv?station=${this.importStation}&replace_existing=${this.replaceExisting}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    alert(`✅ Import thành công!\n\nStation: ${result.station}\nSố mapping: ${result.imported_count}\nVersion: ${result.version}`);
+                    window.location.reload();
+                } else {
+                    alert(`❌ Import thất bại!\n\n${result.detail || 'Unknown error'}`);
+                    this.isUploading = false;
+                }
+            } catch (error) {
+                alert(`❌ Lỗi kết nối!\n\n${error.message}`);
+                this.isUploading = false;
+            }
+        },
+        
+        formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+    }
+}
+</script>
 {% endblock %}
 

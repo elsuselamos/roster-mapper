@@ -183,7 +183,17 @@ async def import_mappings_file(
             import pandas as pd
             from io import BytesIO
             
-            df = pd.read_excel(BytesIO(content), header=None)
+            # Use appropriate engine based on file type
+            engine = "openpyxl" if filename_lower.endswith(".xlsx") else "xlrd"
+            
+            try:
+                df = pd.read_excel(BytesIO(content), header=None, engine=engine)
+            except Exception as excel_error:
+                logger.error(f"Excel read error with {engine}: {excel_error}")
+                # Try without specifying engine
+                df = pd.read_excel(BytesIO(content), header=None)
+            
+            logger.info(f"Excel loaded: {len(df)} rows, {len(df.columns)} columns")
             
             # Use first two columns as from/to
             if len(df.columns) >= 2:
@@ -192,11 +202,19 @@ async def import_mappings_file(
                     to_code = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else ""
                     
                     # Skip header row if it looks like headers
-                    if idx == 0 and from_code.lower() in ["from", "code", "from_code", "mã gốc"]:
+                    if idx == 0 and from_code.lower() in ["from", "code", "from_code", "mã gốc", "from code", "to", "to code"]:
                         continue
                     
-                    if from_code and to_code:
+                    # Skip empty rows
+                    if from_code and to_code and from_code != "nan" and to_code != "nan":
                         mapping_dict[from_code] = to_code
+                
+                logger.info(f"Parsed {len(mapping_dict)} mappings from Excel")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Excel file must have at least 2 columns. Found: {len(df.columns)}"
+                )
         
         else:
             raise HTTPException(
