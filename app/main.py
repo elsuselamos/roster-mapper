@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         extra={
             "app_name": settings.APP_NAME,
             "environment": settings.APP_ENV,
-            "version": "1.0.0"
+            "version": "1.0.1"
         }
     )
     
@@ -46,12 +46,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 # Create FastAPI application
+# Note: docs_url and redoc_url are always enabled (no auth required per spec)
 app = FastAPI(
     title="Roster Mapper API",
     description="Vietjet Maintenance Department - Excel Roster Code Mapping Service",
-    version="1.0.0",
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
+    version="1.0.1",
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
 )
 
@@ -106,7 +107,8 @@ async def api_info() -> dict:
         "service": "Roster Mapper API",
         "description": "Vietjet Maintenance Department - Excel Roster Code Mapping",
         "version": "1.0.0",
-        "docs": "/docs" if settings.DEBUG else "Disabled in production"
+        "docs": "/docs",
+        "redoc": "/redoc"
     }
 
 
