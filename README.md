@@ -15,6 +15,8 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 - ✅ **Xử lý nhiều sheets** trong cùng 1 file
 - ✅ **Giữ nguyên định dạng** (màu sắc, font, border) của file gốc
 - ✅ **2 tùy chọn download**: Giữ format gốc hoặc Text only
+- ✅ **Import mapping**: Hỗ trợ CSV/JSON/Excel với modal xác nhận
+- ✅ **Loading spinner**: UX chuyên nghiệp khi xử lý
 - ✅ Quản lý phiên bản mapping
 - ✅ Web UI thân thiện (Tailwind + HTMX)
 - ✅ API RESTful
@@ -286,6 +288,6 @@ Internal use only - Vietjet Aviation Joint Stock Company
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: December 2025
+**Version**: 1.0.1  
+**Last Updated**: December 8, 2025
 

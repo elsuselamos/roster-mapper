@@ -1,6 +1,6 @@
 [project]
 name = "roster-mapper"
-version = "1.0.0"
+version = "1.0.1"
 description = "Vietjet Maintenance Department - Excel Roster Code Mapping Service"
 authors = [
     {name = "Dat Nguyen Tien", email = "datnguyentien@vietjetair.com"}

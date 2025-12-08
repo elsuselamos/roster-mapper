@@ -26,7 +26,7 @@
 | **Phase 2** | ✅ 100% | Web UI, batch processing, multi-station, style preservation |
 | **Phase 3** | ⏸️ 0% | Authentication (chưa yêu cầu) |
 
-**Current Version**: `v1.0.0`
+**Current Version**: `v1.0.1`
 
 ---
 
@@ -223,6 +223,13 @@ docker-compose up --build
 9. ✅ Updated requirements.txt for Python 3.13
 10. ✅ **Loading Spinner** - Hiển thị trạng thái xử lý khi upload/preview/mapping
 
+### v1.0.1 Updates (08/12/2025):
+11. ✅ **Import Mapping Modal** - Import với xác nhận, loading spinner
+12. ✅ **Support CSV/JSON/Excel** import cho mappings
+13. ✅ **Gunicorn timeout 300s** - Xử lý file lớn không bị timeout
+14. ✅ Fix `styled_stats` iteration bug
+15. ✅ Fix `UnboundLocalError` trong admin.py
+
 ---
 
 ## 📁 Key Files to Review
@@ -234,8 +241,10 @@ docker-compose up --build
 | `app/services/storage.py` | File storage (styled/plain support) |
 | `app/ui/routes.py` | Web UI routes |
 | `app/api/v1/upload.py` | Upload & Download API |
+| `app/api/v1/admin.py` | Admin API - Import CSV/JSON/Excel |
 | `mappings/HAN/latest.json` | HAN station mappings |
-| `templates/*.html` | Jinja2 templates |
+| `templates/admin.html` | Admin UI với Import Modal |
+| `docker/Dockerfile` | Docker config (timeout 300s) |
 
 ---
 
@@ -266,5 +275,5 @@ Dự án được xây dựng qua các phase:
 
 ---
 
-*Last updated: December 5, 2025*
-*Version: 1.0.0*
+*Last updated: December 8, 2025*
+*Version: 1.0.1*
