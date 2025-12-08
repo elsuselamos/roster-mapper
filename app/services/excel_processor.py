@@ -6,8 +6,9 @@ Handles reading and writing Excel files for roster processing.
 Author: datnguyentien@vietjetair.com
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
 from pathlib import Path
+import shutil
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -476,4 +477,115 @@ class ExcelProcessor:
         )
         
         return dest_path
+    
+    def map_workbook_preserve_style(
+        self,
+        source_path: Path | str,
+        dest_path: Path | str,
+        mapper_func: Callable[[Any], str],
+        sheet_names: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Map workbook cells while preserving all formatting (colors, fonts, borders, etc.).
+        
+        This method modifies only cell VALUES, keeping all other attributes intact:
+        - Colors (fill, font color)
+        - Fonts (size, bold, italic)
+        - Borders
+        - Alignment
+        - Number formats
+        - Merged cells
+        - Column widths
+        - Row heights
+        
+        Args:
+            source_path: Path to source Excel file.
+            dest_path: Path to save mapped Excel file.
+            mapper_func: Function that takes cell value and returns mapped value.
+            sheet_names: List of sheets to process (None for all).
+            
+        Returns:
+            Dictionary with mapping statistics per sheet.
+            
+        Example:
+            >>> stats = processor.map_workbook_preserve_style(
+            ...     "input.xlsx",
+            ...     "output.xlsx",
+            ...     mapper.map_cell,
+            ...     ["Sheet1", "Sheet2"]
+            ... )
+        """
+        source_path = Path(source_path)
+        dest_path = Path(dest_path)
+        
+        # Copy source to dest first to preserve everything
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, dest_path)
+        
+        # Load the copied workbook for editing
+        wb = load_workbook(dest_path)
+        
+        # Get sheets to process
+        if sheet_names is None:
+            sheet_names = wb.sheetnames
+        
+        stats = {
+            "sheets_processed": 0,
+            "total_cells_mapped": 0,
+            "total_cells_unchanged": 0,
+            "sheet_stats": {}
+        }
+        
+        for sheet_name in sheet_names:
+            if sheet_name not in wb.sheetnames:
+                logger.warning(f"Sheet '{sheet_name}' not found, skipping")
+                continue
+            
+            ws = wb[sheet_name]
+            sheet_mapped = 0
+            sheet_unchanged = 0
+            
+            logger.info(f"Processing sheet: {sheet_name}")
+            
+            # Iterate through all cells and map values
+            for row in ws.iter_rows():
+                for cell in row:
+                    if cell.value is not None:
+                        original_value = str(cell.value)
+                        mapped_value = mapper_func(original_value)
+                        
+                        # Only update if value changed
+                        if mapped_value != original_value:
+                            cell.value = mapped_value
+                            sheet_mapped += 1
+                        else:
+                            sheet_unchanged += 1
+            
+            stats["sheet_stats"][sheet_name] = {
+                "mapped": sheet_mapped,
+                "unchanged": sheet_unchanged,
+                "total": sheet_mapped + sheet_unchanged
+            }
+            stats["sheets_processed"] += 1
+            stats["total_cells_mapped"] += sheet_mapped
+            stats["total_cells_unchanged"] += sheet_unchanged
+            
+            logger.info(
+                f"Sheet {sheet_name} processed",
+                mapped=sheet_mapped,
+                unchanged=sheet_unchanged
+            )
+        
+        # Save the workbook
+        wb.save(dest_path)
+        wb.close()
+        
+        logger.info(
+            "Workbook mapped with style preservation",
+            source=str(source_path),
+            dest=str(dest_path),
+            total_mapped=stats["total_cells_mapped"]
+        )
+        
+        return stats
 
