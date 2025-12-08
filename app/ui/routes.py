@@ -352,18 +352,18 @@ async def process_files(request: Request):
             )
             
             # Aggregate stats from styled processing
-            for sheet_name, stats in styled_stats.items():
-                total_stats["total_cells"] += stats.get("total_cells", 0)
-                total_stats["mapped_cells"] += stats.get("mapped_cells", 0)
-                total_stats["unmapped_cells"] += stats.get("unchanged_cells", 0)
-                total_stats["empty_cells"] += stats.get("empty_cells", 0)
+            # styled_stats has structure: {sheets_processed, total_cells_mapped, total_cells_unchanged, sheet_stats: {sheet_name: {mapped, unchanged, total}}}
+            for sheet_name, sheet_stat in styled_stats.get("sheet_stats", {}).items():
+                total_stats["total_cells"] += sheet_stat.get("total", 0)
+                total_stats["mapped_cells"] += sheet_stat.get("mapped", 0)
+                total_stats["unmapped_cells"] += sheet_stat.get("unchanged", 0)
                 total_stats["sheets_processed"] += 1
                 
                 sheet_results.append({
                     "sheet": sheet_name,
-                    "rows": stats.get("total_cells", 0),
-                    "mapped": stats.get("mapped_cells", 0),
-                    "unmapped": stats.get("unchanged_cells", 0)
+                    "rows": sheet_stat.get("total", 0),
+                    "mapped": sheet_stat.get("mapped", 0),
+                    "unmapped": sheet_stat.get("unchanged", 0)
                 })
                     
             # ========== FORMAT 2: PLAIN (text only, no formatting) ==========
