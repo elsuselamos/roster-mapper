@@ -47,6 +47,7 @@ Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ c
 | Trang Admin | ✅ Done | Nhập mapping (KHÔNG yêu cầu đăng nhập) |
 | Trang Dashboard | ✅ Done | Thống kê cơ bản |
 | **2 tùy chọn Download** | ✅ **MỚI** | Giữ format gốc HOẶC text thuần |
+| **Loading Spinner** | ✅ **MỚI** | Hiển thị trạng thái đang xử lý (upload, preview, mapping) |
 
 ### 2. Mapping Engine – Production Ready
 
@@ -216,6 +217,7 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 > **Các điểm nổi bật:**
 > - ✅ Engine ổn định, xử lý 16,000+ cells < 10 giây
 > - ✅ UI hoàn chỉnh, dễ sử dụng
+> - ✅ **Loading spinner** khi upload/preview/mapping - UX chuyên nghiệp
 > - ✅ **Giữ nguyên định dạng file gốc** (màu, font, border)
 > - ✅ **2 tùy chọn download**: Styled vs Plain text
 > - ✅ Batch hoạt động tốt
@@ -232,19 +234,28 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 - Drag & drop files
 - Chọn station hoặc auto-detect
 - Hiển thị trạng thái mapping từng station
+- **Loading spinner** khi upload files
 
 ### 2. Trang Chọn Sheets
 - Chọn "Tất cả sheets" hoặc sheets cụ thể
 - Hiển thị danh sách sheets trong file
+- **Loading spinner** khi tạo preview
 
 ### 3. Trang Preview
 - Tab view cho mỗi sheet
 - Highlight ô đã map (xanh) / chưa map (đỏ)
 - Thống kê số cells mapped/unmapped
+- **Loading spinner** khi bắt đầu mapping
 
 ### 4. Trang Results
 - **2 nút download**: 🎨 Giữ Format | 📄 Text Only
 - Thống kê chi tiết per sheet
+
+### 5. Loading Indicator (MỚI)
+- ⏳ Vòng xoay (spinner) màu đỏ Vietjet
+- Text mô tả hành động đang thực hiện
+- Tự động hiện khi upload/preview/mapping
+- Giúp user biết app đang xử lý
 
 ---
 

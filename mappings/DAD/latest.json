@@ -1,20 +1,22 @@
 {
   "_meta": {
-    "version": "20241205_150000",
+    "version": "20251205_150000",
     "station": "DAD",
-    "created_at": "2024-12-05T15:00:00",
+    "created_at": "2024-12-08T15:00:00",
     "created_by": "system",
-    "entry_count": 8,
-    "description": "Sample mappings for Da Nang (DAD)"
+    "entry_count": 9,
+    "description": "mappings for Da Nang (DAD)"
   },
   "mappings": {
-    "DT": "HC",
-    "DO": "HC",
-    "ML": "HC",
-    "BD1_O": "BD1",
-    "BD2_O": "BD2",
-    "AL": "BD1",
-    "PQC": "HC",
-    "CXR": "HC"
+    "M": "E1",
+    "N": "E2",
+    "FL": "E4",
+    "P": "E4",
+    "O": "HC",
+    "O'": "HC/2",
+    "FLM": "E9",
+    "FLN": "E10",
+    "D": "E3"
+
   }
 }

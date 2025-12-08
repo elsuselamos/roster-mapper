@@ -104,8 +104,13 @@ stats = processor.map_workbook_preserve_style(
 ### 4. Web UI Flow
 
 ```
-📤 Upload → 📋 Select Sheets → 👁️ Preview → ✅ Process → 🎉 Results (2 download options)
+📤 Upload → ⏳ Loading → 📋 Select Sheets → ⏳ Loading → 👁️ Preview → ⏳ Loading → ✅ Process → 🎉 Results (2 download options)
 ```
+
+**Loading Spinner**: Hiển thị vòng xoay màu đỏ Vietjet với text mô tả khi:
+- Upload files
+- Tạo preview
+- Bắt đầu mapping
 
 ### 5. Mapping Format
 
@@ -216,6 +221,7 @@ docker-compose up --build
 7. ✅ Favicon support
 8. ✅ Fixed Jinja2 template errors
 9. ✅ Updated requirements.txt for Python 3.13
+10. ✅ **Loading Spinner** - Hiển thị trạng thái xử lý khi upload/preview/mapping
 
 ---
 
