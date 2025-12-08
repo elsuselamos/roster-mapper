@@ -165,8 +165,6 @@ async def import_mappings_file(
         
         # ========== JSON ==========
         elif filename_lower.endswith(".json"):
-            import json
-            
             text_content = content.decode("utf-8")
             data = json.loads(text_content)
             
