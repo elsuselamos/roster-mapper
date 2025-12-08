@@ -65,10 +65,15 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run with Gunicorn + UvicornWorker
+# --timeout 300: Allow 5 minutes for large Excel files
+# --workers 2: Reduce workers for memory efficiency
+# --graceful-timeout 120: Allow graceful shutdown
 CMD ["gunicorn", "app.main:app", \
-     "--workers", "4", \
+     "--workers", "2", \
      "--worker-class", "uvicorn.workers.UvicornWorker", \
      "--bind", "0.0.0.0:8000", \
+     "--timeout", "300", \
+     "--graceful-timeout", "120", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \
      "--capture-output", \
