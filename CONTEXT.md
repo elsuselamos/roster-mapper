@@ -26,7 +26,7 @@
 | **Phase 2** | ✅ 100% | Web UI, batch processing, multi-station, style preservation |
 | **Phase 3** | ⏸️ 0% | Authentication (chưa yêu cầu) |
 
-**Current Version**: `v1.0.1`
+**Current Version**: `v1.0.2`
 
 ---
 
@@ -72,11 +72,23 @@ roster-mapper/
 - **Case-insensitive**: Không phân biệt hoa/thường
 - **Multi-code cells**: Hỗ trợ cell có nhiều code (phân cách bởi `/`, `,`, `;`, space)
 - **Regex patterns**: Hỗ trợ wildcard và regex trong mapping
+- **Empty string mapping**: Hỗ trợ map code sang giá trị rỗng `{"OT": ""}`
+- **Unmapped = Empty**: Code không có trong mapping sẽ thành rỗng (không giữ nguyên)
 
 ```python
 mapper = Mapper(station="HAN")
-result = mapper.map_cell("B1/TR")  # -> "NP/TR"
+result = mapper.map_cell("B1/TR")  # -> "NP/TR" (nếu cả 2 có mapping)
+result = mapper.map_cell("B1/XYZ")  # -> "NP/" (XYZ không có mapping → rỗng)
 ```
+
+#### Mapping Behavior Table
+
+| Input | Mapping | Output | Note |
+|-------|---------|--------|------|
+| `B1` | `{"B1": "NP"}` | `NP` | Exact match |
+| `OT` | `{"OT": ""}` | *(empty)* | Map to empty |
+| `XYZ` | *(none)* | *(empty)* | Unmapped → empty |
+| `B1/B2` | `{"B1": "NP", "B2": "SB"}` | `NP/SB` | Multi-code |
 
 ### 2. Excel Processing với Style Preservation
 
@@ -202,10 +214,13 @@ docker-compose up --build
 
 1. **Python 3.11+** required (tested with 3.12, 3.13)
 2. **Mapping logic**: Code → Code (NOT code → description)
-3. **Missing codes**: Giữ nguyên, không tự động thêm
-4. **Multi-sheet**: Output file giữ nguyên tên sheets gốc
-5. **Style preservation**: Chỉ thay đổi value, giữ nguyên tất cả formatting
-6. **Session data**: Stored in `uploads/temp/session_*.json`
+3. **Unmapped codes**: Chuyển thành **rỗng** (không giữ nguyên)
+4. **Empty mapping**: Hỗ trợ `{"OT": ""}` để xóa code
+5. **Multi-sheet**: Output file giữ nguyên tên sheets gốc
+6. **Style preservation**: Chỉ thay đổi value, giữ nguyên tất cả formatting
+7. **Session data**: Stored in `uploads/temp/session_*.json`
+
+> ⚠️ **QUAN TRỌNG**: Phải định nghĩa đầy đủ TẤT CẢ code cần giữ trong mapping!
 
 ---
 
@@ -229,6 +244,9 @@ docker-compose up --build
 13. ✅ **Gunicorn timeout 300s** - Xử lý file lớn không bị timeout
 14. ✅ Fix `styled_stats` iteration bug
 15. ✅ Fix `UnboundLocalError` trong admin.py
+16. ✅ **API Docs enabled** - Bật /docs và /redoc trong production
+17. ✅ **Empty string mapping** - Hỗ trợ map code sang rỗng `{"OT": ""}`
+18. ✅ **Unmapped → Empty** - Code không có mapping sẽ thành rỗng
 
 ---
 
@@ -276,4 +294,4 @@ Dự án được xây dựng qua các phase:
 ---
 
 *Last updated: December 8, 2025*
-*Version: 1.0.1*
+*Version: 1.0.2*

@@ -8,8 +8,8 @@
 |-----------|----------|
 | **Dự án** | Roster Mapper - Công cụ chuyển đổi mã roster |
 | **Bộ phận** | Quản lý Bảo dưỡng (Maintenance Ops) |
-| **Phiên bản** | v1.0.1 |
-| **Ngày báo cáo** | 08/12/2025 |
+| **Phiên bản** | v1.0.2 |
+| **Ngày báo cáo** | 05/12/2025 (cập nhật 08/12/2025) |
 | **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** |
 | **Website** | vietjetair.com |
 
@@ -46,9 +46,8 @@ Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ c
 | Preview | ✅ Done | 15-20 dòng đầu, highlight xanh/đỏ |
 | Trang Admin | ✅ Done | Nhập mapping (KHÔNG yêu cầu đăng nhập) |
 | Trang Dashboard | ✅ Done | Thống kê cơ bản |
-| **2 tùy chọn Download** | ✅ Done | Giữ format gốc HOẶC text thuần |
-| **Loading Spinner** | ✅ Done | Hiển thị trạng thái đang xử lý |
-| **Import Mapping Modal** | ✅ **MỚI** | Import CSV/JSON/Excel với xác nhận |
+| **2 tùy chọn Download** | ✅ **MỚI** | Giữ format gốc HOẶC text thuần |
+| **Loading Spinner** | ✅ **MỚI** | Hiển thị trạng thái đang xử lý (upload, preview, mapping) |
 
 ### 2. Mapping Engine – Production Ready
 
@@ -60,26 +59,30 @@ Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ c
 | Multi-sheet | ✅ Done | Xử lý nhiều sheets |
 | Case-insensitive | ✅ Done | Không phân biệt hoa/thường |
 | **Style Preservation** | ✅ **MỚI** | Giữ nguyên màu, font, border của file gốc |
+| **Empty Mapping** | ✅ **MỚI** | Hỗ trợ map code sang rỗng `{"OT": ""}` |
+| **Unmapped → Empty** | ✅ **MỚI** | Code không có mapping sẽ thành rỗng |
 
-### 3. Tùy chọn Download
+### 2.1. Bảng Mapping Behavior (MỚI)
+
+| Cell gốc | Mapping định nghĩa | Kết quả | Ghi chú |
+|----------|-------------------|---------|---------|
+| `B1` | `{"B1": "NP"}` | `NP` | ✅ Exact match |
+| `B19` | `{"B1": "NP", "B19": "TR"}` | `TR` | ✅ Longest-key-first |
+| `b1` | `{"B1": "NP"}` | `NP` | ✅ Case-insensitive |
+| `OT` | `{"OT": ""}` | *(rỗng)* | ✅ Map sang empty |
+| `XYZ` | *(không có)* | *(rỗng)* | ⚠️ Unmapped → empty |
+| `B1/B2` | `{"B1": "NP", "B2": "SB"}` | `NP/SB` | ✅ Multi-code |
+| `B1/XYZ` | `{"B1": "NP"}` | `NP/` | ⚠️ XYZ unmapped |
+| `ABC/DEF` | *(không có)* | `/` | ⚠️ Cả 2 unmapped |
+
+> ⚠️ **LƯU Ý QUAN TRỌNG**: Cần định nghĩa đầy đủ **TẤT CẢ** code trong mapping. Code không có sẽ bị xóa (thành rỗng)!
+
+### 3. Tùy chọn Download (MỚI)
 
 | Option | Mô tả |
 |--------|-------|
 | 🎨 **Giữ Format** | Giữ nguyên toàn bộ định dạng gốc: màu sắc, font, border, merge cells, chiều rộng cột. Chỉ thay đổi nội dung text. |
 | 📄 **Text Only** | Chỉ giữ nội dung text thuần, không có định dạng. Phù hợp để import vào hệ thống khác hoặc xử lý tiếp. |
-
-### 3.1. Import Mapping (MỚI)
-
-| Format | Mô tả |
-|--------|-------|
-| 📄 **CSV** | File với columns `from`, `to` |
-| 📋 **JSON** | Object `{"B1": "NP", "B2": "SB"}` |
-| 📊 **Excel** | 2 cột đầu tiên: From Code \| To Code |
-
-**Quy trình Import:**
-1. Nhấn nút **Import** → Chọn file
-2. Modal hiện thông tin file + checkbox "Thay thế mapping"
-3. Xác nhận → Loading spinner → Thông báo kết quả
 
 ### 4. Multi-station
 
@@ -234,11 +237,11 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 > - ✅ **Loading spinner** khi upload/preview/mapping - UX chuyên nghiệp
 > - ✅ **Giữ nguyên định dạng file gốc** (màu, font, border)
 > - ✅ **2 tùy chọn download**: Styled vs Plain text
-> - ✅ **Import Mapping**: Hỗ trợ CSV/JSON/Excel với modal xác nhận
+> - ✅ **Empty mapping**: Hỗ trợ xóa code không cần thiết
+> - ✅ **Unmapped → Empty**: Code không có mapping sẽ thành rỗng
 > - ✅ Batch hoạt động tốt
 > - ✅ Mapping versioning đầy đủ
 > - ✅ Không yêu cầu đăng nhập
-> - ✅ Gunicorn timeout 300s - xử lý file lớn không bị timeout
 > 
 > **Tiếp theo cần dữ liệu thực từ các station để hoàn thiện production rollout."**
 
@@ -267,21 +270,14 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 - **2 nút download**: 🎨 Giữ Format | 📄 Text Only
 - Thống kê chi tiết per sheet
 
-### 5. Loading Indicator
+### 5. Loading Indicator (MỚI)
 - ⏳ Vòng xoay (spinner) màu đỏ Vietjet
 - Text mô tả hành động đang thực hiện
 - Tự động hiện khi upload/preview/mapping
 - Giúp user biết app đang xử lý
 
-### 6. Admin - Import Mapping (MỚI)
-- 📥 Nút **Import** cho từng station
-- Modal xác nhận với thông tin file
-- Checkbox "Thay thế toàn bộ mapping"
-- Loading spinner khi đang import
-- Hỗ trợ **CSV**, **JSON**, **Excel**
-
 ---
 
 **© 2025 Vietjet AMO - IT Department**
 
-*Báo cáo được cập nhật ngày 08/12/2025*
+*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 08/12/2025*

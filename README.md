@@ -17,9 +17,69 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 - ✅ **2 tùy chọn download**: Giữ format gốc hoặc Text only
 - ✅ **Import mapping**: Hỗ trợ CSV/JSON/Excel với modal xác nhận
 - ✅ **Loading spinner**: UX chuyên nghiệp khi xử lý
+- ✅ **Mapping sang rỗng**: Hỗ trợ xóa code không cần thiết
 - ✅ Quản lý phiên bản mapping
 - ✅ Web UI thân thiện (Tailwind + HTMX)
 - ✅ API RESTful
+
+---
+
+## 🔄 Mapping Behavior (Chi tiết)
+
+### Bảng xử lý Mapping Code
+
+| Cell gốc | Mapping định nghĩa | Kết quả | Giải thích |
+|----------|-------------------|---------|------------|
+| `B1` | `{"B1": "NP"}` | `NP` | ✅ Exact match |
+| `B19` | `{"B1": "NP", "B19": "TR"}` | `TR` | ✅ Longest-key-first (B19 > B1) |
+| `b1` | `{"B1": "NP"}` | `NP` | ✅ Case-insensitive |
+| `OT` | `{"OT": ""}` | *(rỗng)* | ✅ Map sang empty string |
+| `XYZ` | *(không có trong mapping)* | *(rỗng)* | ⚠️ Unmapped → empty |
+| `B1/B2` | `{"B1": "NP", "B2": "SB"}` | `NP/SB` | ✅ Multi-code với separator `/` |
+| `B1,B2` | `{"B1": "NP", "B2": "SB"}` | `NP,SB` | ✅ Multi-code với separator `,` |
+| `B1 B2` | `{"B1": "NP", "B2": "SB"}` | `NP SB` | ✅ Multi-code với separator ` ` |
+| `B1/XYZ` | `{"B1": "NP"}` | `NP/` | ⚠️ B1 mapped, XYZ unmapped → empty |
+| `ABC/DEF` | *(không có)* | `/` | ⚠️ Cả 2 unmapped → empty |
+| `^O'.*` | `{"^O'.*": "OT"}` | `OT` | ✅ Regex pattern match |
+| `B*` | `{"B*": "B-Series"}` | `B-Series` | ✅ Wildcard pattern |
+
+### Separators được hỗ trợ
+
+| Separator | Ví dụ | Kết quả |
+|-----------|-------|---------|
+| `/` | `A/B` | `MappedA/MappedB` |
+| `,` | `A,B` | `MappedA,MappedB` |
+| `;` | `A;B` | `MappedA;MappedB` |
+| ` ` (space) | `A B` | `MappedA MappedB` |
+
+### Định nghĩa Mapping (3 cách)
+
+**1. JSON format:**
+```json
+{
+  "B1": "NP",
+  "B2": "SB",
+  "OT": "",
+  "^TR.*": "Training"
+}
+```
+
+**2. CSV format:**
+```csv
+from,to
+B1,NP
+B2,SB
+OT,
+```
+
+**3. Excel format:**
+| From Code | To Code |
+|-----------|---------|
+| B1 | NP |
+| B2 | SB |
+| OT | *(để trống)* |
+
+> ⚠️ **Lưu ý quan trọng**: Code không có trong mapping sẽ thành **giá trị rỗng**. Hãy đảm bảo định nghĩa đầy đủ tất cả các code cần giữ lại!
 
 ## 🚀 Cài đặt & Chạy
 
@@ -288,6 +348,6 @@ Internal use only - Vietjet Aviation Joint Stock Company
 
 ---
 
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Last Updated**: December 8, 2025
 

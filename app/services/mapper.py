@@ -205,8 +205,9 @@ class Mapper:
             return ""
         
         # Try direct mapping first
+        # Note: map_code returns None if not found, "" if mapped to empty
         direct_map = self.map_code(cell_str)
-        if direct_map:
+        if direct_map is not None:  # Explicitly check None to allow empty string mapping
             return direct_map
         
         # Try multi-code mapping
@@ -218,13 +219,14 @@ class Mapper:
                 for part in parts:
                     part = part.strip()
                     mapped = self.map_code(part)
-                    mapped_parts.append(mapped if mapped else part)
+                    # Use mapped value (even if empty), or empty if not found
+                    mapped_parts.append(mapped if mapped is not None else "")
                 
                 # Use same separator in output
                 return separator.join(mapped_parts)
         
-        # Return original if no mapping found
-        return cell_str
+        # Return empty if no mapping found (unmapped codes become empty)
+        return ""
     
     def map_dataframe(
         self,

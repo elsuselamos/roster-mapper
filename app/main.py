@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="Roster Mapper API",
     description="Vietjet Maintenance Department - Excel Roster Code Mapping Service",
-    version="1.0.1",
+    version="1.0.2",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
