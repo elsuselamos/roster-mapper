@@ -1,0 +1,52 @@
+# ===========================================
+# Google Cloud Build Configuration
+# ===========================================
+# Build Docker image for Cloud Run deployment
+#
+# Usage:
+#   gcloud builds submit --config cloudbuild.yaml
+#
+# With substitutions:
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions SHORT_SHA=$(git rev-parse --short HEAD)
+# ===========================================
+
+steps:
+  # Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'docker/Dockerfile.cloudrun'
+      - '-t'
+      - 'gcr.io/${PROJECT_ID}/roster-mapper:${SHORT_SHA}'
+      - '-t'
+      - 'gcr.io/${PROJECT_ID}/roster-mapper:latest'
+      - '-t'
+      - 'gcr.io/${PROJECT_ID}/roster-mapper:1.1.0'
+      - '.'
+
+  # Push images to GCR
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/${PROJECT_ID}/roster-mapper'
+
+# Images to be pushed to the registry
+images:
+  - 'gcr.io/${PROJECT_ID}/roster-mapper:${SHORT_SHA}'
+  - 'gcr.io/${PROJECT_ID}/roster-mapper:latest'
+  - 'gcr.io/${PROJECT_ID}/roster-mapper:1.1.0'
+
+# Substitutions
+substitutions:
+  SHORT_SHA: 'manual'  # Default, will be overridden by --substitutions
+
+# Options
+options:
+  machineType: 'E2_HIGHCPU_8'  # Faster builds for large images
+  logging: CLOUD_LOGGING_ONLY
+
+# Timeout
+timeout: '1200s'  # 20 minutes

@@ -77,12 +77,82 @@ Thêm vào GitHub repo (Settings → Secrets and variables → Actions):
 
 ## 🛠️ Deploy thủ công (Manual)
 
-### Option 1: Dùng Cloud Build
+### Option 0: Deploy từ Google Cloud Console (UI)
+
+**Khi deploy từ Cloud Console, cần chỉ định đúng đường dẫn Dockerfile:**
+
+1. **Truy cập Cloud Run Console:**
+   - Mở [Cloud Run Console](https://console.cloud.google.com/run)
+   - Click **"Create Service"**
+
+2. **Cấu hình Source:**
+   - Chọn **"Set up with Cloud Build"**
+   - Chọn repository (GitHub, Cloud Source Repositories, etc.)
+   - Chọn branch: `main`
+
+3. **Build Configuration:**
+   - **Build Type**: Chọn `Dockerfile`
+   - **Source location**: ⚠️ **QUAN TRỌNG** - Thay đổi từ `/Dockerfile` thành:
+     ```
+     docker/Dockerfile.cloudrun
+     ```
+   - Hoặc nếu Dockerfile ở root với tên khác:
+     ```
+     /Dockerfile.cloudrun
+     ```
+
+4. **Service Configuration:**
+   - Service name: `roster-mapper`
+   - Region: `asia-southeast1`
+   - Authentication: `Allow unauthenticated invocations`
+
+5. **Environment Variables:**
+   - Click **"Variables & Secrets"** → **"Add Variable"**
+   - Thêm các biến sau:
+     ```
+     STORAGE_TYPE=local
+     STORAGE_DIR=/tmp/uploads
+     OUTPUT_DIR=/tmp/output
+     AUTO_DETECT_STATION=true
+     APP_ENV=production
+     LOG_LEVEL=INFO
+     ```
+
+6. **Resource Settings:**
+   - Memory: `1 GiB`
+   - CPU: `1`
+   - Timeout: `300 seconds`
+   - Min instances: `0`
+   - Max instances: `10`
+
+7. **Click "Create"** và đợi build + deploy hoàn tất.
+
+> ⚠️ **Lưu ý**: Nếu không chỉ định đúng `docker/Dockerfile.cloudrun`, build sẽ fail với lỗi "Dockerfile not found".
+
+**💡 Mẹo**: Nếu muốn đơn giản hóa, có thể tạo symlink hoặc copy:
+```bash
+# Trong repo, tạo symlink (Linux/Mac)
+ln -s docker/Dockerfile.cloudrun Dockerfile
+
+# Hoặc copy (Windows/Linux/Mac)
+cp docker/Dockerfile.cloudrun Dockerfile
+```
+Sau đó trong Cloud Console, dùng `/Dockerfile` (mặc định).
+
+---
+
+### Option 1: Dùng Cloud Build (Khuyến nghị - CLI)
 
 ```bash
 cd roster-mapper
 
-# Build image với Cloud Build
+# Build image với Cloud Build (sử dụng cloudbuild.yaml)
+# cloudbuild.yaml tự động chỉ định docker/Dockerfile.cloudrun
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions SHORT_SHA=$(git rev-parse --short HEAD)
+
+# Hoặc build trực tiếp với tag (không dùng cloudbuild.yaml)
 gcloud builds submit \
     --tag gcr.io/$(gcloud config get-value project)/roster-mapper:1.1.0 \
     -f docker/Dockerfile.cloudrun \
@@ -102,7 +172,7 @@ gcloud run deploy roster-mapper \
     --set-env-vars "STORAGE_TYPE=local,STORAGE_DIR=/tmp/uploads,OUTPUT_DIR=/tmp/output,AUTO_DETECT_STATION=true,APP_ENV=production,LOG_LEVEL=INFO"
 ```
 
-### Option 2: Build local + Push
+### Option 2: Build local + Push (CLI)
 
 ```bash
 # Build local
@@ -219,6 +289,7 @@ Mở browser: `$SERVICE_URL/upload`
 
 | Lỗi | Nguyên nhân | Giải pháp |
 |-----|-------------|-----------|
+| `unable to evaluate symlinks in Dockerfile path: lstat /workspace/Dockerfile: no such file or directory` | Cloud Build tìm Dockerfile ở root | **Dùng `cloudbuild.yaml`** hoặc chỉ định `-f docker/Dockerfile.cloudrun` |
 | `Container failed to start` | Dockerfile lỗi | Check build logs |
 | `Permission denied /tmp` | User không có quyền | Verify non-root user setup |
 | `LibreOffice not found` | Package chưa install | Check Dockerfile.cloudrun |

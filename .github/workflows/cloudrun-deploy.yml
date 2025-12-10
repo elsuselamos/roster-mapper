@@ -29,6 +29,7 @@ on:
       - 'static/**'
       - 'mappings/**'
       - 'docker/Dockerfile.cloudrun'
+      - 'cloudbuild.yaml'
       - 'requirements.txt'
       - '.github/workflows/cloudrun-deploy.yml'
   
@@ -116,20 +117,11 @@ jobs:
         id: vars
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build container image
+      - name: Build container image with Cloud Build
         run: |
-          docker build \
-            -f docker/Dockerfile.cloudrun \
-            -t gcr.io/${{ secrets.GCP_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_short }} \
-            -t gcr.io/${{ secrets.GCP_PROJECT }}/${{ env.SERVICE_NAME }}:latest \
-            -t gcr.io/${{ secrets.GCP_PROJECT }}/${{ env.SERVICE_NAME }}:1.1.0 \
-            .
-
-      - name: Push to Google Container Registry
-        run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_short }}
-          docker push gcr.io/${{ secrets.GCP_PROJECT }}/${{ env.SERVICE_NAME }}:latest
-          docker push gcr.io/${{ secrets.GCP_PROJECT }}/${{ env.SERVICE_NAME }}:1.0.2
+          gcloud builds submit \
+            --config cloudbuild.yaml \
+            --substitutions SHORT_SHA=${{ steps.vars.outputs.sha_short }}
 
       - name: Deploy to Cloud Run
         id: deploy
