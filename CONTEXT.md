@@ -26,7 +26,7 @@
 | **Phase 2** | ✅ 100% | Web UI, batch processing, multi-station, style preservation |
 | **Phase 3** | ⏸️ 0% | Authentication (chưa yêu cầu) |
 
-**Current Version**: `v1.0.2`
+**Current Version**: `v1.1.0`
 
 ---
 
@@ -45,7 +45,10 @@ roster-mapper/
 │   ├── services/
 │   │   ├── mapper.py     # Core mapping engine
 │   │   ├── excel_processor.py  # Excel read/write + Style preservation
-│   │   └── storage.py    # File storage service
+│   │   ├── storage.py    # File storage service
+│   │   └── local_storage.py  # Ephemeral storage adapter (Cloud Run)
+│   ├── utils/
+│   │   └── xls_converter.py  # LibreOffice XLS→XLSX converter
 │   ├── core/
 │   │   ├── config.py     # Pydantic settings
 │   │   └── logging.py    # Structured logging
@@ -58,7 +61,12 @@ roster-mapper/
 ├── mappings/             # JSON mapping files per station
 ├── tests/                # Pytest test files
 ├── docs/                 # Documentation
+│   └── DEPLOY_CLOUDRUN.md  # Cloud Run deployment guide
 ├── docker/               # Dockerfile
+│   ├── Dockerfile        # Local/Docker Compose
+│   └── Dockerfile.cloudrun  # Cloud Run optimized
+├── .github/workflows/    # CI/CD
+│   └── cloudrun-deploy.yml  # Cloud Run deployment pipeline
 └── requirements.txt      # Python dependencies
 ```
 
@@ -201,12 +209,27 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 docker-compose up --build
 ```
 
+### Google Cloud Run
+
+```bash
+# Build và deploy
+gcloud builds submit --tag gcr.io/PROJECT/roster-mapper:1.1.0 -f docker/Dockerfile.cloudrun .
+gcloud run deploy roster-mapper --image gcr.io/PROJECT/roster-mapper:1.1.0 --region asia-southeast1
+```
+
+Xem chi tiết: `docs/DEPLOY_CLOUDRUN.md`
+
 ### Access
 
+**Local:**
 - Web UI: http://localhost:8000/upload
 - API Docs: http://localhost:8000/docs
 - Admin: http://localhost:8000/admin
 - Dashboard: http://localhost:8000/dashboard
+
+**Cloud Run:**
+- Service URL sẽ được cung cấp sau khi deploy
+- Tất cả endpoints tương tự như local
 
 ---
 
@@ -248,6 +271,32 @@ docker-compose up --build
 17. ✅ **Empty string mapping** - Hỗ trợ map code sang rỗng `{"OT": ""}`
 18. ✅ **Unmapped → Empty** - Code không có mapping sẽ thành rỗng
 
+### v1.0.2 Updates (08/12/2025):
+19. ✅ **Behavior Table** - Thêm bảng mapping behavior đầy đủ vào docs
+20. ✅ **Documentation Update** - Cập nhật README, CONTEXT, BAO_CAO_TIEN_DO
+21. ✅ **Separators Table** - Thêm bảng separators được hỗ trợ
+22. ✅ **3 Mapping Formats** - Hướng dẫn JSON/CSV/Excel
+
+### v1.1.0 Updates (08/12/2025) - Cloud Run Deployment:
+23. ✅ **Cloud Run Support** - Deploy lên Google Cloud Run với ephemeral storage
+24. ✅ **LocalStorage Adapter** - Ephemeral `/tmp` storage cho Cloud Run
+25. ✅ **LibreOffice Integration** - XLS → XLSX conversion support
+26. ✅ **Dockerfile.cloudrun** - Optimized Dockerfile cho Cloud Run (LibreOffice, port 8080)
+27. ✅ **CI/CD Pipeline** - GitHub Actions tự động build & deploy
+28. ✅ **Health Endpoint Enhanced** - Storage check, Cloud Run detection
+29. ✅ **Deployment Documentation** - `docs/DEPLOY_CLOUDRUN.md` với hướng dẫn chi tiết
+
+---
+
+## 📋 Version History
+
+| Version | Ngày | Thay đổi chính |
+|---------|------|----------------|
+| v1.0.0 | 05/12/2025 | Phase 2 hoàn thành: Web UI, Multi-sheet, Style preservation, 2 download options |
+| v1.0.1 | 08/12/2025 | Import Mapping Modal, Gunicorn timeout, Empty mapping, Unmapped → Empty |
+| v1.0.2 | 08/12/2025 | Documentation update, Behavior Table, Separators Table |
+| v1.1.0 | 08/12/2025 | **Cloud Run Deployment** - Ephemeral storage, LibreOffice, CI/CD pipeline |
+
 ---
 
 ## 📁 Key Files to Review
@@ -257,12 +306,17 @@ docker-compose up --build
 | `app/services/mapper.py` | Core mapping logic |
 | `app/services/excel_processor.py` | Excel read/write + Style preservation |
 | `app/services/storage.py` | File storage (styled/plain support) |
+| `app/services/local_storage.py` | Ephemeral storage adapter (Cloud Run) |
+| `app/utils/xls_converter.py` | LibreOffice XLS→XLSX converter |
 | `app/ui/routes.py` | Web UI routes |
 | `app/api/v1/upload.py` | Upload & Download API |
 | `app/api/v1/admin.py` | Admin API - Import CSV/JSON/Excel |
 | `mappings/HAN/latest.json` | HAN station mappings |
 | `templates/admin.html` | Admin UI với Import Modal |
 | `docker/Dockerfile` | Docker config (timeout 300s) |
+| `docker/Dockerfile.cloudrun` | Cloud Run optimized Dockerfile |
+| `.github/workflows/cloudrun-deploy.yml` | CI/CD pipeline cho Cloud Run |
+| `docs/DEPLOY_CLOUDRUN.md` | Cloud Run deployment guide |
 
 ---
 
@@ -294,4 +348,4 @@ Dự án được xây dựng qua các phase:
 ---
 
 *Last updated: December 8, 2025*
-*Version: 1.0.2*
+*Version: 1.1.0*

@@ -35,9 +35,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         extra={
             "app_name": settings.APP_NAME,
             "environment": settings.APP_ENV,
-            "version": "1.0.1"
+            "version": settings.APP_VERSION,
+            "storage_type": settings.STORAGE_TYPE,
+            "storage_dir": str(settings.STORAGE_DIR),
+            "output_dir": str(settings.OUTPUT_DIR),
+            "port": settings.PORT,
+            "cloud_run": settings.is_cloud_run
         }
     )
+    
+    # Ensure directories exist
+    settings.ensure_directories()
     
     yield
     
@@ -50,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="Roster Mapper API",
     description="Vietjet Maintenance Department - Excel Roster Code Mapping Service",
-    version="1.0.2",
+    version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -91,11 +99,33 @@ async def health_check() -> dict:
     """
     Health check endpoint.
     Returns service status for load balancers and monitoring.
+    Includes storage write permission check for Cloud Run.
     """
+    import os
+    from pathlib import Path
+    
+    # Check storage write permission
+    storage_ok = False
+    try:
+        test_path = settings.STORAGE_DIR / ".health_check"
+        test_path.write_text("ok")
+        test_path.unlink()
+        storage_ok = True
+    except Exception:
+        storage_ok = False
+    
     return {
-        "status": "healthy",
+        "status": "ok" if storage_ok else "degraded",
         "service": settings.APP_NAME,
-        "version": "1.0.0"
+        "version": settings.APP_VERSION,
+        "environment": settings.APP_ENV,
+        "storage": {
+            "type": settings.STORAGE_TYPE,
+            "writable": storage_ok,
+            "storage_dir": str(settings.STORAGE_DIR),
+            "output_dir": str(settings.OUTPUT_DIR)
+        },
+        "cloud_run": settings.is_cloud_run
     }
 
 
@@ -106,7 +136,7 @@ async def api_info() -> dict:
     return {
         "service": "Roster Mapper API",
         "description": "Vietjet Maintenance Department - Excel Roster Code Mapping",
-        "version": "1.0.0",
+        "version": settings.APP_VERSION,
         "docs": "/docs",
         "redoc": "/redoc"
     }

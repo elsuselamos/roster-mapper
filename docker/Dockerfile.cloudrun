@@ -1,0 +1,124 @@
+# ===========================================
+# Roster Mapper - Cloud Run Dockerfile
+# ===========================================
+# Python 3.11 | LibreOffice | Non-root user | Gunicorn
+# 
+# For Google Cloud Run deployment with:
+# - Ephemeral /tmp storage
+# - .xls to .xlsx conversion via LibreOffice
+# - Port 8080 (Cloud Run default)
+#
+# Build: gcloud builds submit --tag gcr.io/PROJECT/roster-mapper:1.0.2
+# Deploy: gcloud run deploy roster-mapper --image gcr.io/PROJECT/roster-mapper:1.0.2
+
+# ===========================================
+# Stage 1: Builder
+# ===========================================
+FROM python:3.11-slim as builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ===========================================
+# Stage 2: Production (Cloud Run)
+# ===========================================
+FROM python:3.11-slim as production
+
+# Labels
+LABEL maintainer="Vietjet AMO IT <it@vietjetair.com>"
+LABEL version="1.1.0"
+LABEL description="Roster Mapper - Excel code mapping service"
+
+# Create non-root user
+RUN groupadd --gid 1000 appgroup && \
+    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
+
+WORKDIR /app
+
+# Install runtime dependencies including LibreOffice for .xls conversion
+# Note: This adds ~200MB to image size but enables .xls support
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    ca-certificates \
+    # LibreOffice for .xls -> .xlsx conversion
+    libreoffice-calc \
+    libreoffice-common \
+    # Fonts for proper rendering
+    fonts-dejavu-core \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application code
+COPY --chown=appuser:appgroup . .
+
+# Create directories for ephemeral storage
+# On Cloud Run, /tmp is writable and ephemeral
+RUN mkdir -p /tmp/uploads /tmp/output /tmp/temp && \
+    chown -R appuser:appgroup /tmp/uploads /tmp/output /tmp/temp && \
+    # Create mapping directories (will be overwritten by volume mount if needed)
+    mkdir -p mappings/global mappings/SGN mappings/HAN mappings/DAD mappings/CXR mappings/HPH mappings/VCA mappings/VII && \
+    chown -R appuser:appgroup mappings
+
+# Switch to non-root user
+USER appuser
+
+# Environment variables for Cloud Run
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    APP_ENV=production \
+    APP_NAME="Vietjet Roster Mapper" \
+    APP_VERSION="1.1.0" \
+    # Storage configuration for ephemeral /tmp
+    STORAGE_TYPE=local \
+    STORAGE_DIR=/tmp/uploads \
+    OUTPUT_DIR=/tmp/output \
+    TEMP_DIR=/tmp/temp \
+    # Cloud Run uses PORT env var (default 8080)
+    PORT=8080 \
+    # Logging
+    LOG_LEVEL=INFO
+
+# Cloud Run uses PORT environment variable
+EXPOSE 8080
+
+# Health check for Cloud Run
+# Note: Cloud Run has its own health checks, this is for local testing
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
+
+# Run with Gunicorn + UvicornWorker
+# Configuration optimized for Cloud Run:
+# - PORT from env var (Cloud Run requirement)
+# - --workers 2: Balance between performance and memory
+# - --timeout 300: Allow time for large Excel files + LibreOffice conversion
+# - --graceful-timeout 120: Graceful shutdown for Cloud Run
+CMD exec gunicorn app.main:app \
+    --workers 2 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:${PORT:-8080} \
+    --timeout 300 \
+    --graceful-timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    --capture-output \
+    --enable-stdio-inheritance

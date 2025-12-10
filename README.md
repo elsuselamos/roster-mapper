@@ -17,7 +17,8 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 - ✅ **2 tùy chọn download**: Giữ format gốc hoặc Text only
 - ✅ **Import mapping**: Hỗ trợ CSV/JSON/Excel với modal xác nhận
 - ✅ **Loading spinner**: UX chuyên nghiệp khi xử lý
-- ✅ **Mapping sang rỗng**: Hỗ trợ xóa code không cần thiết
+- ✅ **Mapping sang rỗng**: Hỗ trợ xóa code không cần thiết `{"OT": ""}`
+- ✅ **Unmapped → Empty**: Code không có trong mapping sẽ bị xóa
 - ✅ Quản lý phiên bản mapping
 - ✅ Web UI thân thiện (Tailwind + HTMX)
 - ✅ API RESTful
@@ -45,12 +46,14 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 
 ### Separators được hỗ trợ
 
-| Separator | Ví dụ | Kết quả |
-|-----------|-------|---------|
-| `/` | `A/B` | `MappedA/MappedB` |
-| `,` | `A,B` | `MappedA,MappedB` |
-| `;` | `A;B` | `MappedA;MappedB` |
-| ` ` (space) | `A B` | `MappedA MappedB` |
+| Separator | Ví dụ | Kết quả | Ghi chú |
+|-----------|-------|---------|---------|
+| `/` | `A/B` | `MappedA/MappedB` | Thông dụng nhất |
+| `,` | `A,B` | `MappedA,MappedB` | Hỗ trợ |
+| `;` | `A;B` | `MappedA;MappedB` | Hỗ trợ |
+| ` ` (space) | `A B` | `MappedA MappedB` | Hỗ trợ nếu rõ ràng |
+
+> **Note**: Hệ thống tự động detect separator đầu tiên tìm thấy trong cell và sử dụng nó để split.
 
 ### Định nghĩa Mapping (3 cách)
 

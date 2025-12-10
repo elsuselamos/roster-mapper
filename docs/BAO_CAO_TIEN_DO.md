@@ -8,7 +8,7 @@
 |-----------|----------|
 | **Dự án** | Roster Mapper - Công cụ chuyển đổi mã roster |
 | **Bộ phận** | Quản lý Bảo dưỡng (Maintenance Ops) |
-| **Phiên bản** | v1.0.2 |
+| **Phiên bản** | v1.1.0 |
 | **Ngày báo cáo** | 05/12/2025 (cập nhật 08/12/2025) |
 | **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** |
 | **Website** | vietjetair.com |
@@ -19,7 +19,7 @@
 
 Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ các station (SGN, HAN, DAD, CXR, HPH, VCA, VII) sang mã chuẩn HR.
 
-Đến thời điểm báo cáo, hệ thống đã **hoàn thành Phase 2**, vận hành ổn định, chạy qua Docker hoặc môi trường local, và sẵn sàng đưa vào thử nghiệm nội bộ.
+Đến thời điểm báo cáo, hệ thống đã **hoàn thành Phase 2**, vận hành ổn định, chạy qua Docker, môi trường local, và **Google Cloud Run**. Sẵn sàng đưa vào thử nghiệm nội bộ và production deployment.
 
 ---
 
@@ -103,8 +103,10 @@ Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ c
 | Source Code | ✅ Done | GitHub: elsuselamos/roster-mapper |
 | Docker | ✅ Done | Multi-stage Dockerfile |
 | Docker Hub CI/CD | ✅ Done | GitHub Actions |
+| **Cloud Run Deployment** | ✅ **MỚI** | Google Cloud Run với ephemeral storage |
+| **CI/CD Pipeline** | ✅ **MỚI** | Auto build & deploy qua GitHub Actions |
 | Tests | ✅ Done | 79 tests PASS |
-| Documentation | ✅ Done | CONTEXT.md, DEPLOY.md, API specs |
+| Documentation | ✅ Done | CONTEXT.md, DEPLOY_CLOUDRUN.md, API specs |
 
 ---
 
@@ -229,7 +231,7 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 
 ## X. KẾT LUẬN ÔNG THẦU
 
-> **"Hệ thống Roster Mapper đã hoàn thành Phase 2, sẵn sàng đưa vào pilot thực tế.**
+> **"Hệ thống Roster Mapper đã hoàn thành Phase 2, sẵn sàng đưa vào pilot thực tế và production deployment.**
 > 
 > **Các điểm nổi bật:**
 > - ✅ Engine ổn định, xử lý 16,000+ cells < 10 giây
@@ -239,6 +241,9 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 > - ✅ **2 tùy chọn download**: Styled vs Plain text
 > - ✅ **Empty mapping**: Hỗ trợ xóa code không cần thiết
 > - ✅ **Unmapped → Empty**: Code không có mapping sẽ thành rỗng
+> - ✅ **Cloud Run Deployment** (v1.1.0): Hỗ trợ deploy lên Google Cloud Run với ephemeral storage
+> - ✅ **CI/CD Pipeline**: Tự động build & deploy qua GitHub Actions
+> - ✅ **LibreOffice Integration**: Hỗ trợ convert .xls → .xlsx
 > - ✅ Batch hoạt động tốt
 > - ✅ Mapping versioning đầy đủ
 > - ✅ Không yêu cầu đăng nhập
@@ -276,8 +281,31 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 - Tự động hiện khi upload/preview/mapping
 - Giúp user biết app đang xử lý
 
+### 6. Cloud Run Deployment (v1.1.0 - MỚI)
+- 🚀 **Google Cloud Run Support**: Deploy lên Cloud Run với ephemeral storage
+- 📦 **LocalStorage Adapter**: Quản lý file tạm trong `/tmp` (ephemeral)
+- 🔄 **LibreOffice Integration**: Tự động convert .xls → .xlsx
+- ⚙️ **CI/CD Pipeline**: GitHub Actions tự động build & deploy
+- 📊 **Enhanced Health Check**: Kiểm tra storage, Cloud Run detection
+- 📖 **Deployment Guide**: Tài liệu chi tiết trong `docs/DEPLOY_CLOUDRUN.md`
+
+---
+
+## XI. CHANGELOG - VERSION 1.1.0
+
+### Cloud Run Deployment Features
+
+| Feature | Mô tả |
+|---------|-------|
+| **Ephemeral Storage** | Sử dụng `/tmp` cho file upload/output (Cloud Run) |
+| **LibreOffice** | Convert .xls → .xlsx tự động |
+| **Dockerfile.cloudrun** | Optimized Dockerfile cho Cloud Run (port 8080) |
+| **CI/CD Pipeline** | GitHub Actions tự động deploy |
+| **Health Endpoint** | Enhanced với storage check |
+| **Documentation** | `DEPLOY_CLOUDRUN.md` với hướng dẫn đầy đủ |
+
 ---
 
 **© 2025 Vietjet AMO - IT Department**
 
-*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 08/12/2025*
+*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 12/12/2025 (v1.1.0)*

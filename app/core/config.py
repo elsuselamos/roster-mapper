@@ -4,9 +4,12 @@ Configuration Module
 Pydantic settings for application configuration.
 Reads from environment variables and .env file.
 
+Supports both local development and Google Cloud Run deployment.
+
 Author: datnguyentien@vietjetair.com
 """
 
+import os
 from typing import List
 from pathlib import Path
 
@@ -20,6 +23,12 @@ class Settings(BaseSettings):
     
     All settings can be overridden via environment variables.
     Environment variables take precedence over .env file values.
+    
+    Cloud Run Deployment:
+    - Set STORAGE_TYPE=local
+    - STORAGE_DIR=/tmp/uploads
+    - OUTPUT_DIR=/tmp/output
+    - PORT will be set by Cloud Run automatically
     """
     
     model_config = SettingsConfigDict(
@@ -30,23 +39,29 @@ class Settings(BaseSettings):
     )
     
     # Application
-    APP_NAME: str = "roster-mapper"
+    APP_NAME: str = "Vietjet Roster Mapper"
+    APP_VERSION: str = "1.1.0"
     APP_ENV: str = "development"
     DEBUG: bool = True
     LOG_LEVEL: str = "INFO"
     
-    # Server
+    # Server - PORT defaults to 8080 for Cloud Run compatibility
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = int(os.getenv("PORT", "8000"))
     
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/roster_mapper"
     DB_ECHO: bool = False
     
-    # Storage paths
+    # Storage configuration
+    STORAGE_TYPE: str = "local"  # "local" for ephemeral, future: "gcs"
     MAPPING_DIR: Path = Path("./mappings")
-    STORAGE_DIR: Path = Path("./uploads")
-    TEMP_DIR: Path = Path("./temp")
+    STORAGE_DIR: Path = Path(os.getenv("STORAGE_DIR", "./uploads"))
+    OUTPUT_DIR: Path = Path(os.getenv("OUTPUT_DIR", "./uploads/processed"))
+    TEMP_DIR: Path = Path(os.getenv("TEMP_DIR", "./temp"))
+    
+    # Cloud Run specific
+    IS_CLOUD_RUN: bool = os.getenv("K_SERVICE", "") != ""  # K_SERVICE is set by Cloud Run
     
     # Features
     AUTO_DETECT_STATION: bool = True
@@ -58,7 +73,7 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
-    @field_validator("MAPPING_DIR", "STORAGE_DIR", "TEMP_DIR", mode="before")
+    @field_validator("MAPPING_DIR", "STORAGE_DIR", "OUTPUT_DIR", "TEMP_DIR", mode="before")
     @classmethod
     def ensure_path(cls, v: str | Path) -> Path:
         """Convert string paths to Path objects."""
@@ -100,8 +115,13 @@ class Settings(BaseSettings):
     
     def ensure_directories(self) -> None:
         """Create necessary directories if they don't exist."""
-        for directory in [self.MAPPING_DIR, self.STORAGE_DIR, self.TEMP_DIR]:
+        for directory in [self.MAPPING_DIR, self.STORAGE_DIR, self.OUTPUT_DIR, self.TEMP_DIR]:
             directory.mkdir(parents=True, exist_ok=True)
+    
+    @property
+    def is_cloud_run(self) -> bool:
+        """Check if running on Google Cloud Run."""
+        return self.IS_CLOUD_RUN or os.getenv("K_SERVICE", "") != ""
 
 
 # Global settings instance
