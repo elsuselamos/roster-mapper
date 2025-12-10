@@ -1,6 +1,6 @@
 # 🚀 Deploy to Google Cloud Run
 
-## Hướng dẫn triển khai Roster Mapper v1.0.2 lên Google Cloud Run
+## Hướng dẫn triển khai Roster Mapper v1.1.0 lên Google Cloud Run
 
 ---
 
@@ -18,26 +18,40 @@
 
 ## 📦 Yêu cầu trước khi deploy
 
-### 0. Kiểm tra Files trong Repo (QUAN TRỌNG)
+### 0. Kiểm tra Files trong Repo (QUAN TRỌNG) ⚠️
 
 **Trước khi deploy, đảm bảo các file sau đã được commit và push:**
 
 ```bash
-# Kiểm tra files có trong repo
+# Bước 1: Kiểm tra files có trong git không
 git ls-files | grep -E "(requirements.txt|pyproject.toml|docker/Dockerfile.cloudrun)"
 
-# Nếu thiếu, commit và push
-git add requirements.txt pyproject.toml docker/Dockerfile.cloudrun cloudbuild.yaml
-git commit -m "Add files for Cloud Run deployment"
+# Bước 2: Nếu thiếu, thêm vào git
+git add requirements.txt
+git add pyproject.toml
+git add docker/Dockerfile.cloudrun
+git add cloudbuild.yaml
+git add app/
+git add mappings/
+
+# Bước 3: Commit và push
+git commit -m "Add files for Cloud Run deployment v1.1.0"
 git push origin main
+
+# Bước 4: Verify lại trên GitHub
+# Mở https://github.com/elsuselamos/roster-mapper/blob/main/requirements.txt
+# Đảm bảo file hiển thị đúng
 ```
 
-**Files bắt buộc:**
-- ✅ `requirements.txt` - Python dependencies
+**Files bắt buộc phải có trong repo:**
+- ✅ `requirements.txt` - **BẮT BUỘC** - Python dependencies
 - ✅ `docker/Dockerfile.cloudrun` - Dockerfile cho Cloud Run
 - ✅ `cloudbuild.yaml` - Cloud Build config (nếu dùng)
 - ✅ `app/` - Application code
 - ✅ `mappings/` - Mapping files (nếu cần)
+- ✅ `pyproject.toml` - Project metadata
+
+> ⚠️ **QUAN TRỌNG**: Nếu `requirements.txt` không có trong repo, Cloud Build sẽ **KHÔNG THỂ** build image!
 
 ### 1. Google Cloud Project
 
@@ -100,6 +114,9 @@ Thêm vào GitHub repo (Settings → Secrets and variables → Actions):
 
 ### Option 0: Deploy từ Google Cloud Console (UI)
 
+> ⚠️ **LƯU Ý**: Deploy từ Cloud Console có thể gặp vấn đề với build context.  
+> **Khuyến nghị**: Dùng **Option 1 (Cloud Build với cloudbuild.yaml)** hoặc **Option 2 (CLI)** để đảm bảo build context đúng.
+
 **Khi deploy từ Cloud Console, cần chỉ định đúng đường dẫn Dockerfile:**
 
 1. **Truy cập Cloud Run Console:**
@@ -109,7 +126,10 @@ Thêm vào GitHub repo (Settings → Secrets and variables → Actions):
 2. **Cấu hình Source:**
    - Chọn **"Set up with Cloud Build"**
    - Chọn repository (GitHub, Cloud Source Repositories, etc.)
-   - Chọn branch: `main`
+   - Chọn branch: `main` ⚠️ **Đảm bảo branch này có `requirements.txt`**
+   - **Commit**: Chọn commit mới nhất (hoặc để trống để dùng HEAD)
+   
+   > 💡 **Tip**: Click vào commit để verify xem `requirements.txt` có trong commit đó không
 
 3. **Build Configuration:**
    - **Build Type**: Chọn `Dockerfile`
@@ -117,16 +137,20 @@ Thêm vào GitHub repo (Settings → Secrets and variables → Actions):
      ```
      docker/Dockerfile.cloudrun
      ```
-   - Hoặc nếu Dockerfile ở root với tên khác:
+   - **Build context**: ⚠️ **QUAN TRỌNG** - Phải là root của repo:
      ```
-     /Dockerfile.cloudrun
+     /
      ```
+     hoặc để trống (mặc định là root)
    
-   > ⚠️ **LƯU Ý**: Đảm bảo các file sau đã được commit và push vào repo:
-   > - `requirements.txt` (bắt buộc)
-   > - `pyproject.toml` (nếu có)
-   > - `mappings/` directory (nếu cần)
-   > - Tất cả code trong `app/`
+   > ⚠️ **LƯU Ý QUAN TRỌNG**: 
+   > - Build context phải là **root của repo** (`/`) để `requirements.txt` có thể được tìm thấy
+   > - Nếu build context là `docker/`, thì `requirements.txt` sẽ không tìm thấy
+   > - Đảm bảo các file sau đã được commit và push vào repo:
+   >   - `requirements.txt` (bắt buộc - phải ở root)
+   >   - `pyproject.toml` (nếu có)
+   >   - `mappings/` directory (nếu cần)
+   >   - Tất cả code trong `app/`
 
 4. **Service Configuration:**
    - Service name: `roster-mapper`
@@ -168,7 +192,47 @@ Sau đó trong Cloud Console, dùng `/Dockerfile` (mặc định).
 
 ---
 
-### Option 1: Dùng Cloud Build (Khuyến nghị - CLI)
+### Option 1: Dùng Cloud Build với cloudbuild.yaml (Khuyến nghị ⭐)
+
+**Cách này đảm bảo build context đúng và tránh lỗi `requirements.txt not found`:**
+
+```bash
+cd roster-mapper
+
+# ⚠️ QUAN TRỌNG: Pull code mới nhất từ GitHub trước khi build
+git pull origin main
+
+# Verify cloudbuild.yaml đã được cập nhật
+cat cloudbuild.yaml | grep "_SHORT_SHA"
+# Phải thấy: _SHORT_SHA (có dấu _ ở đầu)
+
+# Build với cloudbuild.yaml (đã config sẵn build context đúng)
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions _SHORT_SHA=$(git rev-parse --short HEAD)
+
+# Sau khi build xong, deploy
+gcloud run deploy roster-mapper \
+    --image gcr.io/$(gcloud config get-value project)/roster-mapper:$(git rev-parse --short HEAD) \
+    --region asia-southeast1 \
+    --platform managed \
+    --allow-unauthenticated \
+    --memory 1Gi \
+    --cpu 1 \
+    --min-instances 0 \
+    --max-instances 10 \
+    --timeout 300 \
+    --set-env-vars "STORAGE_TYPE=local,STORAGE_DIR=/tmp/uploads,OUTPUT_DIR=/tmp/output,AUTO_DETECT_STATION=true,APP_ENV=production,LOG_LEVEL=INFO"
+```
+
+**Ưu điểm:**
+- ✅ Build context tự động đúng (root của repo)
+- ✅ Không cần chỉnh trong Console
+- ✅ Có thể script hóa và tự động hóa
+
+---
+
+### Option 1b: Dùng Cloud Build trực tiếp (CLI - Alternative)
 
 ```bash
 cd roster-mapper
@@ -177,7 +241,7 @@ cd roster-mapper
 # cloudbuild.yaml tự động chỉ định docker/Dockerfile.cloudrun
 gcloud builds submit \
     --config cloudbuild.yaml \
-    --substitutions SHORT_SHA=$(git rev-parse --short HEAD)
+    --substitutions _SHORT_SHA=$(git rev-parse --short HEAD)
 
 # Hoặc build trực tiếp với tag (không dùng cloudbuild.yaml)
 gcloud builds submit \
@@ -199,17 +263,17 @@ gcloud run deploy roster-mapper \
     --set-env-vars "STORAGE_TYPE=local,STORAGE_DIR=/tmp/uploads,OUTPUT_DIR=/tmp/output,AUTO_DETECT_STATION=true,APP_ENV=production,LOG_LEVEL=INFO"
 ```
 
-### Option 2: Build local + Push (CLI)
+### Option 2: Build local + Push (CLI - Local build)
 
 ```bash
 # Build local
-docker build -f docker/Dockerfile.cloudrun -t roster-mapper:1.0.2 .
+docker build -f docker/Dockerfile.cloudrun -t roster-mapper:1.1.0 .
 
 # Tag for GCR
-docker tag roster-mapper:1.0.2 gcr.io/$(gcloud config get-value project)/roster-mapper:1.0.2
+docker tag roster-mapper:1.1.0 gcr.io/$(gcloud config get-value project)/roster-mapper:1.1.0
 
 # Push to GCR
-docker push gcr.io/$(gcloud config get-value project)/roster-mapper:1.0.2
+docker push gcr.io/$(gcloud config get-value project)/roster-mapper:1.1.0
 
 # Deploy
 gcloud run deploy roster-mapper \
@@ -312,12 +376,90 @@ Mở browser: `$SERVICE_URL/upload`
 
 ## 🐛 Troubleshooting
 
+### ⚡ Quick Fix: Substitution key format error
+
+**Nếu gặp lỗi `substitution key SHORT_SHA does not respect format ^_[A-Z0-9_]+$`:**
+
+```bash
+# Bước 1: Pull code mới nhất từ GitHub
+cd roster-mapper
+git pull origin main
+
+# Bước 2: Verify cloudbuild.yaml đã được cập nhật
+cat cloudbuild.yaml | grep "_SHORT_SHA"
+# Phải thấy: _SHORT_SHA (có dấu _ ở đầu)
+# Nếu thấy: SHORT_SHA (không có _) → file chưa được cập nhật
+
+# Bước 3: Nếu file chưa cập nhật, commit và push
+git add cloudbuild.yaml
+git commit -m "Fix cloudbuild.yaml: use _SHORT_SHA format"
+git push origin main
+
+# Bước 4: Pull lại và build
+git pull origin main
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions _SHORT_SHA=$(git rev-parse --short HEAD)
+```
+
+> ⚠️ **Lưu ý**: Cloud Build yêu cầu substitution keys phải bắt đầu bằng `_` và chỉ chứa chữ hoa, số, gạch dưới.
+
+### ⚡ Quick Fix: requirements.txt not found
+
+**Nếu gặp lỗi `COPY failed: file not found: stat requirements.txt`:**
+
+**Nguyên nhân thường gặp:**
+1. File chưa được commit/push vào GitHub
+2. **Build context không đúng** (Cloud Console set sai)
+3. Chọn sai commit/branch
+
+**Giải pháp:**
+
+```bash
+# Bước 1: Kiểm tra file có trong git không
+cd roster-mapper
+git ls-files requirements.txt
+
+# Bước 2: Nếu không có output, file chưa được track
+# Thêm vào git:
+git add requirements.txt
+git commit -m "Add requirements.txt for Cloud Run deployment"
+git push origin main
+
+# Bước 3: Verify trên GitHub
+# Mở: https://github.com/elsuselamos/roster-mapper/blob/main/requirements.txt
+# File phải hiển thị được
+
+# Bước 4: Deploy lại từ Cloud Console
+# - Chọn commit mới nhất (có requirements.txt)
+# - Source location: docker/Dockerfile.cloudrun
+# - ⚠️ Build context: Phải là "/" (root) hoặc để trống
+```
+
+**Nếu vẫn lỗi sau khi verify file có trên GitHub:**
+
+1. **Kiểm tra Build Context trong Cloud Console:**
+   - Trong phần "Build Configuration"
+   - Tìm field "Build context" hoặc "Working directory"
+   - Phải là `/` hoặc để trống (không phải `docker/`)
+
+2. **Hoặc dùng Cloud Build config file (Khuyến nghị):**
+   ```bash
+   # Thay vì deploy từ Console, dùng CLI với cloudbuild.yaml
+   gcloud builds submit --config cloudbuild.yaml
+   ```
+
+3. **Verify build context:**
+   - Trong Cloud Build logs, check xem working directory là gì
+   - Nếu là `/workspace/docker/` thì sai → phải là `/workspace/`
+
 ### Lỗi thường gặp
 
 | Lỗi | Nguyên nhân | Giải pháp |
 |-----|-------------|-----------|
+| `substitution key SHORT_SHA does not respect format ^_[A-Z0-9_]+$` | Substitution key sai format hoặc file chưa cập nhật | **1. Pull code mới nhất:** `git pull origin main`<br>**2. Verify:** `cat cloudbuild.yaml \| grep "_SHORT_SHA"` (phải có `_` ở đầu)<br>**3. Dùng:** `--substitutions _SHORT_SHA=$(git rev-parse --short HEAD)` |
 | `unable to evaluate symlinks in Dockerfile path: lstat /workspace/Dockerfile: no such file or directory` | Cloud Build tìm Dockerfile ở root | **Dùng `cloudbuild.yaml`** hoặc chỉ định `-f docker/Dockerfile.cloudrun` |
-| `COPY failed: file not found: stat requirements.txt: file does not exist` | `requirements.txt` không có trong build context | **Đảm bảo `requirements.txt` đã được commit và push vào repo** |
+| `COPY failed: file not found: stat requirements.txt: file does not exist` | `requirements.txt` không có trong build context | **1. Kiểm tra file có trong repo:** `git ls-files requirements.txt`<br>**2. Nếu không có:** `git add requirements.txt && git commit -m "Add requirements.txt" && git push`<br>**3. Verify trên GitHub:** Mở file trên web để confirm<br>**4. Chọn lại commit mới nhất trong Cloud Console** |
 | `Container failed to start` | Dockerfile lỗi | Check build logs |
 | `Permission denied /tmp` | User không có quyền | Verify non-root user setup |
 | `LibreOffice not found` | Package chưa install | Check Dockerfile.cloudrun |

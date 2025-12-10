@@ -8,7 +8,7 @@
 #
 # With substitutions:
 #   gcloud builds submit --config cloudbuild.yaml \
-#     --substitutions SHORT_SHA=$(git rev-parse --short HEAD)
+#     --substitutions _SHORT_SHA=$(git rev-parse --short HEAD)
 # ===========================================
 
 steps:
@@ -19,7 +19,7 @@ steps:
       - '-f'
       - 'docker/Dockerfile.cloudrun'
       - '-t'
-      - 'gcr.io/${PROJECT_ID}/roster-mapper:${SHORT_SHA}'
+      - 'gcr.io/${PROJECT_ID}/roster-mapper:${_SHORT_SHA}'
       - '-t'
       - 'gcr.io/${PROJECT_ID}/roster-mapper:latest'
       - '-t'
@@ -35,13 +35,14 @@ steps:
 
 # Images to be pushed to the registry
 images:
-  - 'gcr.io/${PROJECT_ID}/roster-mapper:${SHORT_SHA}'
+  - 'gcr.io/${PROJECT_ID}/roster-mapper:${_SHORT_SHA}'
   - 'gcr.io/${PROJECT_ID}/roster-mapper:latest'
   - 'gcr.io/${PROJECT_ID}/roster-mapper:1.1.0'
 
 # Substitutions
+# Note: Keys must start with underscore and be uppercase
 substitutions:
-  SHORT_SHA: 'manual'  # Default, will be overridden by --substitutions
+  _SHORT_SHA: 'manual'  # Default, will be overridden by --substitutions
 
 # Options
 options:

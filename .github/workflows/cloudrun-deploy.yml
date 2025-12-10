@@ -121,7 +121,7 @@ jobs:
         run: |
           gcloud builds submit \
             --config cloudbuild.yaml \
-            --substitutions SHORT_SHA=${{ steps.vars.outputs.sha_short }}
+            --substitutions _SHORT_SHA=${{ steps.vars.outputs.sha_short }}
 
       - name: Deploy to Cloud Run
         id: deploy

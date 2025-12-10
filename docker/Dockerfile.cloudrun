@@ -29,8 +29,15 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
+# Try multiple possible locations for requirements.txt
+# (handles different build contexts from Cloud Console)
+COPY requirements.txt* ./
+RUN if [ ! -f requirements.txt ]; then \
+        echo "ERROR: requirements.txt not found in build context!" && \
+        echo "Current directory contents:" && ls -la && \
+        exit 1; \
+    fi && \
+    pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # ===========================================
