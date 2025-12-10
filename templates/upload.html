@@ -15,6 +15,24 @@
     </div>
     {% endif %}
     
+    {% if request.query_params.get("error") == "results_not_found" %}
+    <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p class="text-yellow-800">
+            ⚠️ <strong>Không tìm thấy kết quả mapping.</strong><br>
+            Có thể do timeout hoặc lỗi trong quá trình xử lý. Vui lòng thử lại.
+        </p>
+    </div>
+    {% endif %}
+    
+    {% if request.query_params.get("error") == "processing_failed" %}
+    <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-red-800">
+            ❌ <strong>Lỗi xử lý file.</strong><br>
+            Vui lòng kiểm tra log hoặc thử lại với file khác.
+        </p>
+    </div>
+    {% endif %}
+    
     <form action="/upload" method="POST" enctype="multipart/form-data" class="space-y-6"
           data-loading
           data-loading-text="📤 Đang upload files..."

@@ -13,14 +13,13 @@
             <a href="/select-sheets" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
                 ← Chọn lại sheets
             </a>
-            <form action="/process" method="POST" class="inline"
-                  data-loading
-                  data-loading-text="⚙️ Đang mapping..."
-                  data-loading-subtext="Đang chuyển đổi mã code, giữ nguyên định dạng file">
-                <button type="submit" class="px-6 py-2 bg-vj-red hover:bg-vj-red-dark text-white font-medium rounded-lg transition-colors">
-                    ✅ Start Mapping
-                </button>
-            </form>
+            <!-- Hidden form for processing (header button) -->
+            <form id="process-form-header" action="/process" method="POST" style="display: none;"></form>
+            <button type="button" 
+                    onclick="processFiles()"
+                    class="px-6 py-2 bg-vj-red hover:bg-vj-red-dark text-white font-medium rounded-lg transition-colors">
+                ✅ Start Mapping
+            </button>
         </div>
     </div>
     
@@ -181,15 +180,212 @@
         <a href="/select-sheets" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
             ← Chọn lại sheets
         </a>
-        <form action="/process" method="POST" class="inline"
-              data-loading
-              data-loading-text="⚙️ Đang mapping {{ total_sheets }} sheets..."
-              data-loading-subtext="Đang chuyển đổi mã code và giữ nguyên định dạng file gốc">
-            <button type="submit" class="px-8 py-3 bg-vj-red hover:bg-vj-red-dark text-white font-semibold rounded-lg transition-colors shadow-lg">
-                ✅ Xác nhận & Start Mapping ({{ total_sheets }} sheets)
-            </button>
-        </form>
+        <!-- Hidden form for processing (data comes from session) -->
+        <form id="process-form" action="/process" method="POST" style="display: none;"></form>
+        <button type="button" 
+                onclick="processFiles()"
+                class="px-8 py-3 bg-vj-red hover:bg-vj-red-dark text-white font-semibold rounded-lg transition-colors shadow-lg">
+            ✅ Xác nhận & Start Mapping ({{ total_sheets }} sheets)
+        </button>
     </div>
     {% endif %}
 </div>
+
+{% block scripts %}
+<script>
+    // Process files with API status check
+    async function processFiles() {
+        // Find the hidden form (try both locations)
+        let form = document.getElementById('process-form') || document.getElementById('process-form-header');
+        
+        if (!form) {
+            // Create a temporary form for submission
+            form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/process';
+            form.style.display = 'none';
+            document.body.appendChild(form);
+        }
+        
+        await submitProcessRequest(form);
+    }
+    
+    async function submitProcessRequest(form) {
+        const formData = new FormData(form);
+        const totalSheets = {{ total_sheets | default(1) }};
+        
+        // Show loading
+        showLoading(
+            '⚙️ Đang mapping ' + totalSheets + ' sheets...',
+            'Đang chuyển đổi mã code và giữ nguyên định dạng file gốc'
+        );
+        
+        // Disable all submit buttons
+        const buttons = document.querySelectorAll('button[onclick="processFiles()"]');
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+        });
+        
+        try {
+            // Submit with AJAX
+            const response = await fetch('/process', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            // Check content type
+            const contentType = response.headers.get('content-type');
+            const isJson = contentType && contentType.includes('application/json');
+            
+            if (!response.ok) {
+                // If not JSON, might be redirect (fallback)
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            let data;
+            try {
+                if (isJson) {
+                    data = await response.json();
+                } else {
+                    // If not JSON, might be HTML redirect (fallback to old behavior)
+                    // This happens if backend doesn't support JSON response
+                    console.warn('Backend returned non-JSON response, falling back to redirect');
+                    hideLoading();
+                    buttons.forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('btn-loading');
+                    });
+                    // Follow redirect (traditional form submit behavior)
+                    window.location.href = response.url || '/results';
+                    return;
+                }
+            } catch (parseError) {
+                // JSON parse error
+                console.error('Failed to parse JSON response:', parseError);
+                throw new Error('Invalid response from server. Please try again.');
+            }
+            
+            if (data.success && data.session_id) {
+                // Start polling for status
+                await pollStatus(data.session_id, totalSheets);
+            } else {
+                throw new Error(data.message || 'Processing failed');
+            }
+            
+        } catch (error) {
+            console.error('Processing error:', error);
+            hideLoading();
+            buttons.forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+            });
+            
+            alert('❌ Lỗi xử lý: ' + error.message + '\n\nVui lòng thử lại hoặc liên hệ support.');
+        }
+    }
+    
+    // Poll status until completed
+    async function pollStatus(sessionId, totalSheets, maxAttempts = 120) {
+        let attempts = 0;
+        let lastStatus = null;
+        
+        const checkStatus = async () => {
+            attempts++;
+            
+            try {
+                const response = await fetch(`/api/v1/results/status?session_id=${sessionId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                lastStatus = data.status;
+                
+                // Update loading text based on status
+                if (data.status === 'processing' || data.status === 'not_found') {
+                    // Still processing
+                    showLoading(
+                        '⚙️ Đang xử lý...',
+                        `Đang mapping ${totalSheets} sheets (${attempts * 2}s)...`
+                    );
+                } else if (data.status === 'completed') {
+                    // Completed!
+                    showLoading(
+                        '✅ Hoàn thành!',
+                        'Đang chuyển hướng đến trang kết quả...'
+                    );
+                    
+                    // Small delay to show success message
+                    setTimeout(() => {
+                        hideLoading();
+                        window.location.href = `/results?session_id=${sessionId}`;
+                    }, 500);
+                    return;
+                } else if (data.status === 'failed') {
+                    // Failed
+                    hideLoading();
+                    const buttons = document.querySelectorAll('button[onclick="processFiles()"]');
+                    buttons.forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('btn-loading');
+                    });
+                    alert('❌ Lỗi xử lý: ' + (data.message || 'Unknown error'));
+                    return;
+                }
+                
+                // Continue polling
+                if (attempts < maxAttempts) {
+                    setTimeout(checkStatus, 2000); // Check every 2 seconds
+                } else {
+                    // Timeout
+                    hideLoading();
+                    const buttons = document.querySelectorAll('button[onclick="processFiles()"]');
+                    buttons.forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('btn-loading');
+                    });
+                    
+                    // Try to redirect anyway (maybe processing finished but status check failed)
+                    if (lastStatus === 'not_found') {
+                        alert('⏱️ Timeout: Xử lý mất quá nhiều thời gian.\n\nĐang thử chuyển đến trang kết quả...');
+                        window.location.href = `/results?session_id=${sessionId}`;
+                    } else {
+                        alert('⏱️ Timeout: Xử lý mất quá nhiều thời gian.\n\nVui lòng thử lại hoặc liên hệ support.');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Status check error:', error);
+                
+                if (attempts < maxAttempts) {
+                    // Retry after 2 seconds
+                    setTimeout(checkStatus, 2000);
+                } else {
+                    hideLoading();
+                    const buttons = document.querySelectorAll('button[onclick="processFiles()"]');
+                    buttons.forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('btn-loading');
+                    });
+                    
+                    alert('❌ Lỗi kiểm tra trạng thái.\n\nĐang thử chuyển đến trang kết quả...');
+                    // Try redirect anyway
+                    window.location.href = `/results?session_id=${sessionId}`;
+                }
+            }
+        };
+        
+        // Start polling after 2 seconds (give server time to start processing)
+        setTimeout(checkStatus, 2000);
+    }
+</script>
 {% endblock %}

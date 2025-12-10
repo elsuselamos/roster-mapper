@@ -8,6 +8,7 @@ Author: datnguyentien@vietjetair.com
 
 from typing import Optional, List
 from pathlib import Path
+import json
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query, Form
 from fastapi.responses import FileResponse
@@ -47,6 +48,15 @@ class ProcessResponse(BaseModel):
     message: str
     download_url: str
     stats: dict
+
+
+class StatusResponse(BaseModel):
+    """Response model for processing status check."""
+    status: str  # "processing", "completed", "failed", "not_found"
+    session_id: str
+    message: str
+    results: Optional[dict] = None
+    progress: Optional[dict] = None  # For future: progress percentage, current sheet, etc.
 
 
 class StationInfo(BaseModel):
@@ -252,6 +262,74 @@ async def download_file(
         path=output_path,
         filename=f"mapped_{file_id}_{filename_suffix}.xlsx",
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+@router.get("/results/status", response_model=StatusResponse)
+async def check_processing_status(
+    session_id: str = Query(..., description="Session ID from processing request")
+) -> StatusResponse:
+    """
+    Check the status of a processing job.
+    
+    Returns:
+    - "processing": Job is still running
+    - "completed": Job finished, results available
+    - "failed": Job failed
+    - "not_found": Session ID not found
+    """
+    # Method 1: Check OUTPUT_DIR/results/{session_id}.json (preferred)
+    results_dir = settings.OUTPUT_DIR / "results"
+    results_path = results_dir / f"{session_id}.json"
+    
+    if results_path.exists():
+        try:
+            with open(results_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            results = data.get("results", [])
+            logger.info(f"Status check: Found results for session_id={session_id}, {len(results)} files")
+            
+            return StatusResponse(
+                status="completed",
+                session_id=session_id,
+                message=f"Processing completed. {len(results)} file(s) processed.",
+                results={"files": results}
+            )
+        except Exception as e:
+            logger.error(f"Error reading results file: {e}", exc_info=True)
+            return StatusResponse(
+                status="failed",
+                session_id=session_id,
+                message=f"Error reading results: {str(e)}"
+            )
+    
+    # Method 2: Check TEMP_DIR/session_results.json (fallback for same-instance)
+    fallback_path = settings.TEMP_DIR / "session_results.json"
+    if fallback_path.exists():
+        try:
+            with open(fallback_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            # Check if this session matches (no session_id in fallback, so assume it's current)
+            results = data.get("results", [])
+            if results:
+                logger.info(f"Status check: Found fallback results, {len(results)} files")
+                return StatusResponse(
+                    status="completed",
+                    session_id=session_id,
+                    message=f"Processing completed. {len(results)} file(s) processed.",
+                    results={"files": results}
+                )
+        except Exception as e:
+            logger.warning(f"Error reading fallback results: {e}")
+    
+    # Not found
+    logger.warning(f"Status check: Session not found: {session_id}")
+    return StatusResponse(
+        status="not_found",
+        session_id=session_id,
+        message="Session not found. Processing may still be in progress or session expired."
     )
 
 

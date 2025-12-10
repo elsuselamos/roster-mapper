@@ -117,6 +117,8 @@ class Settings(BaseSettings):
         """Create necessary directories if they don't exist."""
         for directory in [self.MAPPING_DIR, self.STORAGE_DIR, self.OUTPUT_DIR, self.TEMP_DIR]:
             directory.mkdir(parents=True, exist_ok=True)
+        # Also ensure results subdirectory exists
+        (self.OUTPUT_DIR / "results").mkdir(parents=True, exist_ok=True)
     
     @property
     def is_cloud_run(self) -> bool:

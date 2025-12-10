@@ -9,9 +9,11 @@ Author: datnguyentien@vietjetair.com
 from typing import Optional, List
 from pathlib import Path
 import json
+import os
+import time
 
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import settings
@@ -401,28 +403,131 @@ async def process_files(request: Request):
                 "error": str(e)
             })
     
-    # Store results
-    results_path = settings.TEMP_DIR / "session_results.json"
-    with open(results_path, "w") as f:
-        json.dump({"results": results}, f)
+    # Store results - Use a unique session ID to avoid conflicts across Cloud Run instances
+    session_id = f"session_{int(time.time() * 1000)}"
     
-    return RedirectResponse(url="/results", status_code=302)
+    # Store results in OUTPUT_DIR/results (same location as processed files)
+    # Note: On Cloud Run, OUTPUT_DIR is /tmp/output (ephemeral, instance-specific)
+    # But since processed files are also here, results should be accessible via download endpoint
+    # For true multi-instance support, would need GCS or database
+    results_dir = settings.OUTPUT_DIR / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    results_path = results_dir / f"{session_id}.json"
+    
+    # Cleanup old result files (older than 1 hour) to prevent disk space issues
+    try:
+        current_time = time.time()
+        for old_file in results_dir.glob("session_*.json"):
+            try:
+                if old_file.stat().st_mtime < current_time - 3600:  # 1 hour
+                    old_file.unlink()
+                    logger.debug(f"Cleaned up old result file: {old_file.name}")
+            except Exception as e:
+                logger.warning(f"Error cleaning up old result file {old_file}: {e}")
+    except Exception as e:
+        logger.warning(f"Error during result file cleanup: {e}")
+    
+    try:
+        # Write results with explicit flush
+        with open(results_path, "w", encoding="utf-8") as f:
+            json.dump({"results": results, "session_id": session_id}, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())  # Force write to disk
+        
+        # Verify file was written
+        if not results_path.exists():
+            logger.error(f"Failed to create results file: {results_path}")
+            raise Exception("Failed to save results file")
+        
+        logger.info(f"Results saved successfully: {results_path}, size: {results_path.stat().st_size} bytes, session_id: {session_id}")
+        
+        # Check if client wants JSON response (AJAX request)
+        accept_header = request.headers.get("accept", "")
+        if "application/json" in accept_header.lower():
+            # Return JSON for API/AJAX clients
+            return JSONResponse(content={
+                "success": True,
+                "session_id": session_id,
+                "message": f"Processing completed. {len(results)} file(s) processed.",
+                "results_url": f"/results?session_id={session_id}",
+                "status_url": f"/api/v1/results/status?session_id={session_id}",
+                "files_count": len(results)
+            })
+        
+        # Default: Redirect for form submissions
+        return RedirectResponse(url=f"/results?session_id={session_id}", status_code=302)
+        
+    except Exception as e:
+        logger.error(f"Error saving results file: {e}", exc_info=True)
+        # Fallback: try TEMP_DIR (may work if same instance)
+        fallback_path = settings.TEMP_DIR / "session_results.json"
+        fallback_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(fallback_path, "w", encoding="utf-8") as f:
+                json.dump({"results": results}, f, ensure_ascii=False)
+                f.flush()
+            logger.warning(f"Used fallback path: {fallback_path}")
+            return RedirectResponse(url="/results", status_code=302)
+        except Exception as e2:
+            logger.error(f"Fallback also failed: {e2}", exc_info=True)
+            # Last resort: redirect anyway, frontend will show error
+            return RedirectResponse(url="/upload?error=processing_failed", status_code=302)
 
 
 @router.get("/results", response_class=HTMLResponse)
 async def results_page(request: Request):
     """Results page - show processing results."""
-    results_path = settings.TEMP_DIR / "session_results.json"
+    # Try to get session_id from query parameter
+    session_id = request.query_params.get("session_id")
     
-    if not results_path.exists():
-        return RedirectResponse(url="/upload", status_code=302)
+    results_data = None
     
-    with open(results_path, "r") as f:
-        data = json.load(f)
+    # Method 1: Try OUTPUT_DIR/results/{session_id}.json (preferred for Cloud Run)
+    if session_id:
+        results_dir = settings.OUTPUT_DIR / "results"
+        results_path = results_dir / f"{session_id}.json"
+        logger.info(f"Looking for results with session_id: {session_id}, path: {results_path}")
+        
+        if results_path.exists():
+            try:
+                with open(results_path, "r", encoding="utf-8") as f:
+                    results_data = json.load(f)
+                logger.info(f"Loaded results from OUTPUT_DIR: {results_path}")
+            except Exception as e:
+                logger.error(f"Error reading results file from OUTPUT_DIR: {e}", exc_info=True)
+    
+    # Method 2: Fallback to TEMP_DIR/session_results.json (for same-instance requests)
+    if not results_data:
+        fallback_path = settings.TEMP_DIR / "session_results.json"
+        logger.info(f"Trying fallback path: {fallback_path}")
+        
+        if fallback_path.exists():
+            try:
+                with open(fallback_path, "r", encoding="utf-8") as f:
+                    results_data = json.load(f)
+                logger.info(f"Loaded results from TEMP_DIR: {fallback_path}")
+            except Exception as e:
+                logger.error(f"Error reading fallback results file: {e}", exc_info=True)
+    
+    if not results_data:
+        logger.warning(f"Results file not found. session_id: {session_id}, TEMP_DIR: {settings.TEMP_DIR}, OUTPUT_DIR: {settings.OUTPUT_DIR}")
+        # List available files for debugging
+        if settings.OUTPUT_DIR.exists():
+            results_dir = settings.OUTPUT_DIR / "results"
+            if results_dir.exists():
+                result_files = list(results_dir.glob("*.json"))
+                logger.info(f"Available result files in OUTPUT_DIR/results: {[f.name for f in result_files[:5]]}")
+        if settings.TEMP_DIR.exists():
+            temp_files = list(settings.TEMP_DIR.glob("*"))
+            logger.info(f"Files in TEMP_DIR: {[f.name for f in temp_files[:5]]}")
+        return RedirectResponse(url="/upload?error=results_not_found", status_code=302)
+    
+    results = results_data.get("results", [])
+    logger.info(f"Loaded {len(results)} results")
     
     return templates.TemplateResponse("results.html", {
         "request": request,
-        "results": data.get("results", []),
+        "results": results,
         "page_title": "Results"
     })
 
