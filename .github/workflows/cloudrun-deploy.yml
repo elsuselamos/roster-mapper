@@ -145,6 +145,14 @@ jobs:
             --set-env-vars "LOG_LEVEL=INFO" \
             --set-env-vars "DEBUG=false"
 
+      - name: Set IAM Policy (Allow Public Access)
+        run: |
+          gcloud run services add-iam-policy-binding ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --member allUsers \
+            --role roles/run.invoker \
+            || echo "IAM policy already set or failed (may need manual setup)"
+
       - name: Get Service URL
         run: |
           SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \

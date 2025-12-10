@@ -223,6 +223,12 @@ gcloud run deploy roster-mapper \
     --max-instances 10 \
     --timeout 300 \
     --set-env-vars "STORAGE_TYPE=local,STORAGE_DIR=/tmp/uploads,OUTPUT_DIR=/tmp/output,AUTO_DETECT_STATION=true,APP_ENV=production,LOG_LEVEL=INFO"
+
+# ⚠️ Nếu có warning "Setting IAM policy failed", chạy lệnh sau để cho phép public access:
+gcloud run services add-iam-policy-binding roster-mapper \
+    --region asia-southeast1 \
+    --member allUsers \
+    --role roles/run.invoker
 ```
 
 **Ưu điểm:**
@@ -281,6 +287,12 @@ gcloud run deploy roster-mapper \
     --region asia-southeast1 \
     --platform managed \
     --allow-unauthenticated
+
+# ⚠️ Nếu có warning về IAM policy, chạy lệnh sau:
+gcloud run services add-iam-policy-binding roster-mapper \
+    --region asia-southeast1 \
+    --member allUsers \
+    --role roles/run.invoker
 ```
 
 ---
@@ -350,7 +362,20 @@ gcloud run services describe roster-mapper \
 
 ## 🧪 Testing sau deploy
 
-### 1. Health Check
+### 1. Fix IAM Policy (Nếu gặp lỗi "Forbidden")
+
+```bash
+# Cho phép public access (nếu chưa được set)
+gcloud run services add-iam-policy-binding roster-mapper \
+    --region asia-southeast1 \
+    --member allUsers \
+    --role roles/run.invoker
+
+# Verify
+gcloud run services get-iam-policy roster-mapper --region asia-southeast1
+```
+
+### 2. Health Check
 
 ```bash
 SERVICE_URL=$(gcloud run services describe roster-mapper --region asia-southeast1 --format='value(status.url)')
@@ -359,7 +384,7 @@ curl "$SERVICE_URL/health"
 # Expected: {"status":"ok","version":"1.1.0",...}
 ```
 
-### 2. Test Upload API
+### 3. Test Upload API
 
 ```bash
 # Upload file Excel
@@ -368,7 +393,7 @@ curl -X POST "$SERVICE_URL/api/v1/upload" \
     -F "station=HAN"
 ```
 
-### 3. Test Web UI
+### 4. Test Web UI
 
 Mở browser: `$SERVICE_URL/upload`
 
@@ -403,6 +428,26 @@ gcloud builds submit \
 ```
 
 > ⚠️ **Lưu ý**: Cloud Build yêu cầu substitution keys phải bắt đầu bằng `_` và chỉ chứa chữ hoa, số, gạch dưới.
+
+### ⚡ Quick Fix: Error Forbidden (403)
+
+**Nếu gặp lỗi `Error: Forbidden - Your client does not have permission` khi truy cập Service URL:**
+
+```bash
+# Cho phép public access (unauthenticated)
+gcloud run services add-iam-policy-binding roster-mapper \
+    --region asia-southeast1 \
+    --member allUsers \
+    --role roles/run.invoker
+
+# Verify IAM policy
+gcloud run services get-iam-policy roster-mapper --region asia-southeast1
+
+# Test lại
+curl https://roster-mapper-359831071888.asia-southeast1.run.app/health
+```
+
+> 💡 **Lưu ý**: Nếu lệnh trên fail, có thể cần quyền `roles/run.admin` hoặc set qua Cloud Console.
 
 ### ⚡ Quick Fix: requirements.txt not found
 
@@ -463,6 +508,8 @@ git push origin main
 | `Container failed to start` | Dockerfile lỗi | Check build logs |
 | `Permission denied /tmp` | User không có quyền | Verify non-root user setup |
 | `LibreOffice not found` | Package chưa install | Check Dockerfile.cloudrun |
+| `Error: Forbidden - Your client does not have permission` | IAM policy chưa được set | **Chạy:** `gcloud run services add-iam-policy-binding roster-mapper --region asia-southeast1 --member allUsers --role roles/run.invoker` |
+| `Setting IAM policy failed` | Quyền không đủ hoặc policy conflict | **1. Thử lại với beta command:** `gcloud beta run services add-iam-policy-binding...`<br>**2. Hoặc set qua Console:** Cloud Run → Service → Permissions → Add Principal → `allUsers` → Role: `Cloud Run Invoker` |
 | `Health check failed` | App chưa start kịp | Tăng start-period |
 | `Memory limit exceeded` | File quá lớn | Tăng memory limit |
 
