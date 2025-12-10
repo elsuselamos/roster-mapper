@@ -18,6 +18,27 @@
 
 ## 📦 Yêu cầu trước khi deploy
 
+### 0. Kiểm tra Files trong Repo (QUAN TRỌNG)
+
+**Trước khi deploy, đảm bảo các file sau đã được commit và push:**
+
+```bash
+# Kiểm tra files có trong repo
+git ls-files | grep -E "(requirements.txt|pyproject.toml|docker/Dockerfile.cloudrun)"
+
+# Nếu thiếu, commit và push
+git add requirements.txt pyproject.toml docker/Dockerfile.cloudrun cloudbuild.yaml
+git commit -m "Add files for Cloud Run deployment"
+git push origin main
+```
+
+**Files bắt buộc:**
+- ✅ `requirements.txt` - Python dependencies
+- ✅ `docker/Dockerfile.cloudrun` - Dockerfile cho Cloud Run
+- ✅ `cloudbuild.yaml` - Cloud Build config (nếu dùng)
+- ✅ `app/` - Application code
+- ✅ `mappings/` - Mapping files (nếu cần)
+
 ### 1. Google Cloud Project
 
 ```bash
@@ -100,6 +121,12 @@ Thêm vào GitHub repo (Settings → Secrets and variables → Actions):
      ```
      /Dockerfile.cloudrun
      ```
+   
+   > ⚠️ **LƯU Ý**: Đảm bảo các file sau đã được commit và push vào repo:
+   > - `requirements.txt` (bắt buộc)
+   > - `pyproject.toml` (nếu có)
+   > - `mappings/` directory (nếu cần)
+   > - Tất cả code trong `app/`
 
 4. **Service Configuration:**
    - Service name: `roster-mapper`
@@ -290,6 +317,7 @@ Mở browser: `$SERVICE_URL/upload`
 | Lỗi | Nguyên nhân | Giải pháp |
 |-----|-------------|-----------|
 | `unable to evaluate symlinks in Dockerfile path: lstat /workspace/Dockerfile: no such file or directory` | Cloud Build tìm Dockerfile ở root | **Dùng `cloudbuild.yaml`** hoặc chỉ định `-f docker/Dockerfile.cloudrun` |
+| `COPY failed: file not found: stat requirements.txt: file does not exist` | `requirements.txt` không có trong build context | **Đảm bảo `requirements.txt` đã được commit và push vào repo** |
 | `Container failed to start` | Dockerfile lỗi | Check build logs |
 | `Permission denied /tmp` | User không có quyền | Verify non-root user setup |
 | `LibreOffice not found` | Package chưa install | Check Dockerfile.cloudrun |
@@ -385,8 +413,10 @@ gcloud run services update roster-mapper \
 ### Pre-deploy
 
 - [ ] Tests pass (`pytest -q`)
-- [ ] Dockerfile.cloudrun build OK
-- [ ] GitHub secrets configured
+- [ ] **`requirements.txt` đã được commit và push vào repo** ⚠️
+- [ ] **Tất cả code đã được commit và push** ⚠️
+- [ ] Dockerfile.cloudrun build OK (test local: `docker build -f docker/Dockerfile.cloudrun -t test .`)
+- [ ] GitHub secrets configured (nếu dùng CI/CD)
 - [ ] GCP APIs enabled
 
 ### Post-deploy

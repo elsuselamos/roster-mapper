@@ -65,6 +65,11 @@ Dockerfile*
 docker-compose*
 .docker/
 
+# Important: DO NOT ignore these files
+!requirements.txt
+!pyproject.toml
+!mappings/
+
 # Misc
 .DS_Store
 Thumbs.db
