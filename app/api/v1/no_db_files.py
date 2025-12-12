@@ -225,6 +225,42 @@ def delete_meta_and_files(file_id: str) -> None:
     _meta_cache.pop(file_id, None)
 
 
+def save_session_results(session_id: str, results: list) -> None:
+    """
+    Save session results to metadata JSON.
+    This allows results to be shared across Cloud Run instances via metadata lookup.
+    
+    Args:
+        session_id: Session identifier
+        results: List of processing results
+    """
+    meta = {
+        "session_id": session_id,
+        "results": results,
+        "created_at": _iso_now(),
+        "expires_at": _now_ts() + FILE_TTL_SECONDS,
+        "type": "session_results"
+    }
+    save_meta(session_id, meta)
+    logger.info(f"Saved session results: {session_id}, {len(results)} files")
+
+
+def load_session_results(session_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Load session results from metadata JSON.
+    
+    Args:
+        session_id: Session identifier
+        
+    Returns:
+        Results data or None if not found
+    """
+    meta = load_meta(session_id)
+    if meta and meta.get("type") == "session_results":
+        return meta
+    return None
+
+
 @router.post("/upload")
 async def upload_file(
     request: Request,

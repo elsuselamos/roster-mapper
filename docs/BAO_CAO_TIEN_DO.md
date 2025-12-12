@@ -8,7 +8,7 @@
 |-----------|----------|
 | **Dự án** | Roster Mapper - Công cụ chuyển đổi mã roster |
 | **Bộ phận** | Quản lý Bảo dưỡng (Maintenance Ops) |
-| **Phiên bản** | v1.2.0 (Ephemeral File Lifecycle - No-DB + Empty Mapping Support) |
+| **Phiên bản** | v1.2.4 (Ephemeral File Lifecycle - No-DB + Empty Mapping Support + Single-Instance Deployment) |
 | **Ngày báo cáo** | 13/12/2025 |
 | **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** + **No-DB Production Ready** + **Cloud Run Ready** |
 | **Website** | vietjetair.com |
@@ -21,12 +21,15 @@ Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ c
 
 Đến thời điểm báo cáo, hệ thống đã **hoàn thành Phase 2**, vận hành ổn định, chạy qua Docker, môi trường local, và **Google Cloud Run**. 
 
-**Tính năng mới nhất (v1.2.0):**
+**Tính năng mới nhất (v1.2.4):**
 - ✅ **Ephemeral File Lifecycle**: Auto-deletion, TTL cleanup, Files API
 - ✅ **No-DB Architecture**: Metadata lưu trong JSON files, không cần database
 - ✅ **Empty Mapping Support**: Hỗ trợ map code sang rỗng `{"BD1": ""}` để xóa code
 - ✅ **Unmapped Preserve**: Code không có mapping sẽ giữ nguyên giá trị gốc (v1.0.1 behavior)
-- ✅ **Complete Deployment Guide**: Hướng dẫn đầy đủ trong `README.md`
+- ✅ **Single-Instance Deployment** (v1.2.4): Giải quyết vấn đề multi-instance (min-instances 1, max-instances 1)
+- ✅ **UI Routes Updated** (v1.2.4): Chuyển sang dùng No-DB endpoints (`/api/v1/no-db-files/*`)
+- ✅ **CI/CD Optional** (v1.2.4): Di chuyển CI/CD ra khỏi bước deploy chính, chỉ khi cần
+- ✅ **Complete Deployment Guide**: Hướng dẫn đầy đủ trong `README.md` (Linux & PowerShell)
 - ✅ **Cloud Run Services Enabled**: Đã enable các APIs cần thiết cho deployment
 
 Sẵn sàng đưa vào thử nghiệm nội bộ và production deployment.
@@ -371,6 +374,8 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 
 ### VERSION 1.2.0 (13/12/2025) - Ephemeral File Lifecycle (No-DB) + Empty Mapping
 
+### VERSION 1.2.4 (13/12/2025) - Single-Instance Deployment + UI Routes Updated
+
 | Feature | Mô tả |
 |---------|-------|
 | **No-DB File API** | `/api/v1/no-db-files/*` - Upload/Map/Download với auto-deletion |
@@ -416,6 +421,6 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 
 **© 2025 Vietjet AMO - IT Department**
 
-*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 13/12/2025 (v1.2.0 - Ephemeral File Lifecycle - No-DB + Empty Mapping)*  
+*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 13/12/2025 (v1.2.4 - Single-Instance Deployment + UI Routes Updated)*  
 *Status: ✅ Production Ready - Sẵn sàng deploy lên Cloud Run (No-DB)*  
 *Highlights: Empty mapping support, Unmapped preserve (v1.0.1), Cloud Run APIs enabled, Cleanup task fixed*

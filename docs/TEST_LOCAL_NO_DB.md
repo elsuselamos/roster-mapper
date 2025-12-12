@@ -77,7 +77,7 @@ curl http://localhost:8000/health
 ```json
 {
   "status": "ok",
-  "version": "1.2.0"
+  "version": "1.2.4"
 }
 ```
 
@@ -329,5 +329,5 @@ uploads/
 ---
 
 **Last Updated:** 2025-12-13  
-**Version:** v1.2.0
+**Version:** v1.2.4
 

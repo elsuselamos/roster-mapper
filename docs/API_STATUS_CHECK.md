@@ -232,7 +232,7 @@ curl "http://localhost:8000/api/v1/results/status?session_id=session_1234567890"
 
 ---
 
-**Version:** 1.2.0  
+**Version:** 1.2.4  
 **Last Updated:** 2025-12-13  
 **Status:** Production Ready
 

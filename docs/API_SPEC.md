@@ -387,7 +387,7 @@ OFF,Nghỉ
 
 ---
 
-## 6. Ephemeral File Management API (v1.2.0) - With Database
+## 6. Ephemeral File Management API (v1.2.0) - With Database (Deprecated)
 
 > **Note:** Endpoints này sử dụng database để track metadata.  
 > Để deploy không cần database, xem Section 7: No-DB File Management API.
@@ -534,7 +534,7 @@ download_mode: string (optional) - "styled" (default) hoặc "plain"
 
 ---
 
-## 7. No-DB File Management API (v1.2.0)
+## 7. No-DB File Management API (v1.2.4) ⭐
 
 > **Không cần Database!** Metadata lưu trong JSON files.  
 > Phù hợp cho Pilot/MVP hoặc single-instance deployment.
@@ -662,11 +662,12 @@ download_mode: string (optional, default: "styled") - "styled" hoặc "plain"
 | Version | Date | Changes |
 |---------|------|---------|
 | v1.2.0 | 2025-12-13 | No-DB File Management API, Ephemeral storage |
+| v1.2.4 | 2025-12-13 | Single-instance deployment, UI routes updated, CI/CD optional |
 | v1.1.0 | 2025-12-08 | Cloud Run deployment, LibreOffice support |
 | v1.0.0 | 2025-12-05 | Initial release |
 
 ---
 
 **Last Updated:** 2025-12-13  
-**Version:** 1.2.0
+**Version:** 1.2.4
 

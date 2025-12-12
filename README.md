@@ -260,7 +260,9 @@ roster-mapper/
 
 ## 🔌 API Endpoints
 
-### No-DB File Management (Recommended)
+### No-DB File Management API (Recommended) ⭐
+
+**UI routes đã chuyển sang dùng No-DB endpoints để giải quyết vấn đề multi-instance.**
 
 | Method | Endpoint | Mô tả |
 |--------|----------|-------|
@@ -271,15 +273,18 @@ roster-mapper/
 
 **Xem chi tiết:** [`docs/API_SPEC.md`](docs/API_SPEC.md) - Section 7: No-DB File Management API
 
-### Legacy Endpoints (UI)
+### Legacy Endpoints (Deprecated - UI đã chuyển sang No-DB)
 
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| POST | `/api/v1/upload` | Upload file Excel (UI) |
-| GET | `/api/v1/preview/{file_id}` | Preview sheet |
-| POST | `/api/v1/process/{file_id}` | Process với mapping (UI) |
-| GET | `/api/v1/download/{file_id}` | Download file đã xử lý |
-| GET | `/api/v1/stations` | Danh sách stations |
+**Lưu ý:** UI routes (`/upload`, `/process`, `/results`) đã được cập nhật để dùng No-DB endpoints internally.
+
+| Method | Endpoint | Mô tả | Status |
+|--------|----------|-------|--------|
+| POST | `/api/v1/upload` | Upload file Excel (UI) | ⚠️ Deprecated - UI dùng No-DB |
+| GET | `/api/v1/preview/{file_id}` | Preview sheet | ✅ Active |
+| POST | `/api/v1/process/{file_id}` | Process với mapping (UI) | ⚠️ Deprecated - UI dùng No-DB |
+| GET | `/api/v1/download/{file_id}` | Download file đã xử lý | ⚠️ Deprecated - UI dùng No-DB |
+| GET | `/api/v1/stations` | Danh sách stations | ✅ Active |
+| GET | `/api/v1/results/status` | Check processing status | ✅ Active (dùng No-DB metadata) |
 
 ### Admin
 
@@ -383,7 +388,8 @@ Hệ thống sử dụng **No-DB architecture** - không cần database:
 - ✅ Metadata lưu trong JSON files (`/tmp/meta/`)
 - ✅ Files lưu trong ephemeral storage (`/tmp/`)
 - ✅ Auto-deletion sau download hoặc TTL expiry
-- ✅ Phù hợp cho Pilot/MVP và single-instance deployment
+- ✅ **Single-instance deployment** - Giải quyết vấn đề multi-instance
+- ✅ **No-DB Endpoints** - UI routes đã chuyển sang dùng `/api/v1/no-db-files/*`
 
 **Xem chi tiết:** [`docs/NO_DB_DEPLOYMENT.md`](docs/NO_DB_DEPLOYMENT.md)
 
@@ -438,6 +444,7 @@ gcloud config get-value project
 
 #### Bước 2: Setup Service Accounts & IAM
 
+**Linux/Mac:**
 ```bash
 # 2.1. Tạo Service Account cho Cloud Run runtime
 gcloud iam service-accounts create roster-mapper-runner \
@@ -449,62 +456,54 @@ SA_RUNNER_EMAIL="roster-mapper-runner@$(gcloud config get-value project).iam.gse
 gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
     --member="serviceAccount:$SA_RUNNER_EMAIL" \
     --role="roles/logging.logWriter"
-
-# 2.3. Tạo Service Account cho CI/CD (GitHub Actions) - Optional
-gcloud iam service-accounts create roster-mapper-ci \
-    --display-name="Roster Mapper CI/CD Service Account"
-
-SA_CI_EMAIL="roster-mapper-ci@$(gcloud config get-value project).iam.gserviceaccount.com"
-
-# 2.4. Grant CI/CD roles
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-    --member="serviceAccount:$SA_CI_EMAIL" \
-    --role="roles/run.admin"
-
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-    --member="serviceAccount:$SA_CI_EMAIL" \
-    --role="roles/cloudbuild.builds.editor"
-
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-    --member="serviceAccount:$SA_CI_EMAIL" \
-    --role="roles/storage.objectViewer"
-
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-    --member="serviceAccount:$SA_CI_EMAIL" \
-    --role="roles/iam.serviceAccountUser"
-
-# 2.5. Tạo và download CI service account key (nếu dùng CI/CD)
-gcloud iam service-accounts keys create ~/roster-mapper-ci-key.json \
-    --iam-account=$SA_CI_EMAIL
-
-echo "✅ CI Service Account key saved to: ~/roster-mapper-ci-key.json"
-echo "⚠️  Add this to GitHub Secrets as GCP_SA_KEY (if using CI/CD)"
 ```
 
-#### Bước 3: Build và Deploy Cloud Run
+**PowerShell (Windows):**
+```powershell
+# 2.1. Tạo Service Account cho Cloud Run runtime
+gcloud iam service-accounts create roster-mapper-runner `
+    --display-name="Roster Mapper Cloud Run Service Account"
 
+$PROJECT = gcloud config get-value project
+$SA_RUNNER_EMAIL = "roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
+# 2.2. Grant Logging access
+gcloud projects add-iam-policy-binding $PROJECT `
+    --member="serviceAccount:$SA_RUNNER_EMAIL" `
+    --role="roles/logging.logWriter"
+```
+
+#### Bước 3: Build và Deploy Cloud Run (Single Instance)
+
+**Linux/Mac:**
 ```bash
 # 3.1. Ensure code is up-to-date
 git pull origin main
 
 # 3.2. Build Docker image với Cloud Build
+PROJECT=$(gcloud config get-value project)
+SHORT_SHA=$(git rev-parse --short HEAD)
+
+# Option A: Build với cloudbuild.yaml (khuyến nghị)
 gcloud builds submit \
-    --tag gcr.io/$(gcloud config get-value project)/roster-mapper:latest \
-    -f docker/Dockerfile.cloudrun \
-    .
+    --config cloudbuild.yaml \
+    --substitutions "_SHORT_SHA=$SHORT_SHA"
 
-# Hoặc dùng cloudbuild.yaml (nếu có):
+# Option B: Build trực tiếp (nếu không dùng cloudbuild.yaml)
 # gcloud builds submit \
-#     --config cloudbuild.yaml \
-#     --substitutions _SHORT_SHA=$(git rev-parse --short HEAD)
+#     --tag "gcr.io/$PROJECT/roster-mapper:latest" \
+#     -f docker/Dockerfile.cloudrun \
+#     .
 
-# 3.3. Deploy to Cloud Run (No-DB)
+# 3.3. Deploy to Cloud Run (No-DB, Single Instance)
+SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
 gcloud run deploy roster-mapper \
-    --image gcr.io/$(gcloud config get-value project)/roster-mapper:latest \
+    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" \
     --region asia-southeast1 \
     --platform managed \
     --allow-unauthenticated \
-    --service-account $SA_RUNNER_EMAIL \
+    --service-account "$SA_RUNNER_EMAIL" \
     --set-env-vars "STORAGE_TYPE=local" \
     --set-env-vars "STORAGE_DIR=/tmp/uploads" \
     --set-env-vars "OUTPUT_DIR=/tmp/output" \
@@ -519,8 +518,8 @@ gcloud run deploy roster-mapper \
     --memory 1Gi \
     --cpu 1 \
     --timeout 300 \
-    --min-instances 0 \
-    --max-instances 10 \
+    --min-instances 1 \
+    --max-instances 1 \
     --concurrency 80
 
 # 3.4. Set IAM policy (cho phép public access)
@@ -535,6 +534,73 @@ SERVICE_URL=$(gcloud run services describe roster-mapper \
     --format='value(status.url)')
 echo "✅ Service deployed to: $SERVICE_URL"
 ```
+
+**PowerShell (Windows):**
+```powershell
+# 3.1. Ensure code is up-to-date
+git pull origin main
+
+# 3.2. Build Docker image với Cloud Build
+$PROJECT = gcloud config get-value project
+$SHORT_SHA = git rev-parse --short HEAD
+
+# Option A: Build với cloudbuild.yaml (khuyến nghị)
+gcloud builds submit `
+    --config cloudbuild.yaml `
+    --substitutions "_SHORT_SHA=$SHORT_SHA"
+
+# Option B: Build trực tiếp (nếu không dùng cloudbuild.yaml)
+# gcloud builds submit `
+#     --tag "gcr.io/$PROJECT/roster-mapper:latest" `
+#     -f docker/Dockerfile.cloudrun `
+#     .
+
+# 3.3. Deploy to Cloud Run (No-DB, Single Instance)
+$SA_RUNNER_EMAIL = "roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
+gcloud run deploy roster-mapper `
+    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" `
+    --region asia-southeast1 `
+    --platform managed `
+    --allow-unauthenticated `
+    --service-account $SA_RUNNER_EMAIL `
+    --set-env-vars "STORAGE_TYPE=local" `
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" `
+    --set-env-vars "OUTPUT_DIR=/tmp/output" `
+    --set-env-vars "TEMP_DIR=/tmp/temp" `
+    --set-env-vars "META_DIR=/tmp/meta" `
+    --set-env-vars "APP_ENV=production" `
+    --set-env-vars "LOG_LEVEL=INFO" `
+    --set-env-vars "DEBUG=false" `
+    --set-env-vars "AUTO_DETECT_STATION=true" `
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" `
+    --set-env-vars "FILE_TTL_SECONDS=3600" `
+    --memory 1Gi `
+    --cpu 1 `
+    --timeout 300 `
+    --min-instances 1 `
+    --max-instances 1 `
+    --concurrency 80
+
+# 3.4. Set IAM policy (cho phép public access)
+gcloud run services add-iam-policy-binding roster-mapper `
+    --region asia-southeast1 `
+    --member allUsers `
+    --role roles/run.invoker
+
+# 3.5. Get service URL
+$SERVICE_URL = gcloud run services describe roster-mapper `
+    --region asia-southeast1 `
+    --format='value(status.url)'
+Write-Host "✅ Service deployed to: $SERVICE_URL"
+```
+
+**Lưu ý về Single Instance:**
+- ✅ **Giải quyết vấn đề multi-instance**: Tất cả requests đến cùng 1 instance
+- ✅ **Files luôn tìm thấy**: Upload, process, download đều trên cùng instance
+- ⚠️ **Không có auto-scaling**: Nếu traffic cao, có thể chậm
+- ⚠️ **Instance restart**: Files trong `/tmp` sẽ mất (ephemeral storage)
+- ⚠️ **Chi phí**: Instance luôn chạy (không scale to zero)
 
 #### Bước 4: Verify Deployment
 
@@ -555,27 +621,6 @@ gcloud run logs read roster-mapper \
     --format="table(timestamp,severity,textPayload)"
 ```
 
-#### Bước 5: Setup GitHub Secrets (cho CI/CD) - Optional
-
-Nếu dùng CI/CD, vào GitHub repo → Settings → Secrets and variables → Actions → New repository secret:
-
-| Secret Name | Value | Lấy từ đâu |
-|-------------|-------|------------|
-| `GCP_PROJECT` | Project ID | `gcloud config get-value project` |
-| `GCP_SA_KEY` | Nội dung JSON key | File `~/roster-mapper-ci-key.json` (bước 2.5) |
-
-**Cách lấy GCP_SA_KEY:**
-```bash
-# Copy toàn bộ nội dung file JSON
-cat ~/roster-mapper-ci-key.json
-# Copy output và paste vào GitHub Secret
-```
-
-#### Bước 6: CI/CD Workflow (Automatic) - Optional
-
-File `.github/workflows/cloudrun-deploy.yml` đã được cấu hình sẵn. Chỉ cần:
-- Push code lên branch `main`
-- Workflow sẽ tự động: test → build → deploy
 
 ---
 
@@ -678,21 +723,30 @@ gcloud run services get-iam-policy roster-mapper --region asia-southeast1
 
 ---
 
-### 📊 Resource Recommendations
+### 📊 Resource Recommendations (Single Instance)
 
-| Workload | Memory | CPU | Max Instances | Timeout |
-|----------|--------|-----|---------------|---------|
-| Light (< 5k cells) | 512Mi | 1 | 5 | 300s |
-| Medium (5k-20k cells) | 1Gi | 1 | 10 | 300s |
-| Heavy (> 20k cells) | 2Gi | 2 | 20 | 600s |
+| Workload | Memory | CPU | Timeout | Notes |
+|----------|--------|-----|---------|-------|
+| Light (< 5k cells) | 512Mi | 1 | 300s | Đủ cho file nhỏ |
+| Medium (5k-20k cells) | 1Gi | 1 | 300s | **Khuyến nghị** |
+| Heavy (> 20k cells) | 2Gi | 1-2 | 600s | File lớn, nhiều sheets |
+
+**Lưu ý:** Với single-instance, không cần `--max-instances` (luôn = 1)
 
 **Update resources:**
 ```bash
+# Linux/Mac
 gcloud run services update roster-mapper \
     --region asia-southeast1 \
     --memory 2Gi \
     --cpu 2 \
-    --max-instances 20 \
+    --timeout 600
+
+# PowerShell
+gcloud run services update roster-mapper `
+    --region asia-southeast1 `
+    --memory 2Gi `
+    --cpu 2 `
     --timeout 600
 ```
 
@@ -737,9 +791,9 @@ gcloud run domain-mappings create \
 - [ ] `requirements.txt` đã commit và push
 - [ ] Tất cả code đã commit và push
 - [ ] Dockerfile.cloudrun build OK (test local)
-- [ ] GitHub secrets configured (nếu dùng CI/CD)
 - [ ] GCP APIs enabled
-- [ ] Service accounts created với đúng roles
+- [ ] Service account `roster-mapper-runner` created với `roles/logging.logWriter`
+- [ ] GitHub secrets configured (chỉ nếu dùng CI/CD - optional)
 
 #### Post-deploy
 - [ ] Service URL accessible
@@ -777,12 +831,37 @@ curl http://localhost:8000/health
 
 ### Cập nhật phiên bản mới
 
-**Cloud Run:**
+**Linux/Mac:**
 ```bash
 # Rebuild và redeploy
-gcloud builds submit --tag gcr.io/$(gcloud config get-value project)/roster-mapper:latest -f docker/Dockerfile.cloudrun .
+PROJECT=$(gcloud config get-value project)
+SHORT_SHA=$(git rev-parse --short HEAD)
+
+# Build
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions "_SHORT_SHA=$SHORT_SHA"
+
+# Deploy
 gcloud run deploy roster-mapper \
-    --image gcr.io/$(gcloud config get-value project)/roster-mapper:latest \
+    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" \
+    --region asia-southeast1
+```
+
+**PowerShell (Windows):**
+```powershell
+# Rebuild và redeploy
+$PROJECT = gcloud config get-value project
+$SHORT_SHA = git rev-parse --short HEAD
+
+# Build
+gcloud builds submit `
+    --config cloudbuild.yaml `
+    --substitutions "_SHORT_SHA=$SHORT_SHA"
+
+# Deploy
+gcloud run deploy roster-mapper `
+    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" `
     --region asia-southeast1
 ```
 
@@ -793,6 +872,110 @@ git pull
 docker-compose down
 docker-compose up -d --build
 ```
+
+---
+
+### 🔄 CI/CD (Optional - Chỉ khi cần)
+
+Nếu muốn tự động build & deploy khi push code lên GitHub:
+
+#### Bước 1: Setup Service Account cho CI/CD
+
+**Linux/Mac:**
+```bash
+# Tạo Service Account cho CI/CD
+gcloud iam service-accounts create roster-mapper-ci \
+    --display-name="Roster Mapper CI/CD Service Account"
+
+SA_CI_EMAIL="roster-mapper-ci@$(gcloud config get-value project).iam.gserviceaccount.com"
+
+# Grant CI/CD roles
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:$SA_CI_EMAIL" \
+    --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:$SA_CI_EMAIL" \
+    --role="roles/cloudbuild.builds.editor"
+
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:$SA_CI_EMAIL" \
+    --role="roles/storage.objectViewer"
+
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:$SA_CI_EMAIL" \
+    --role="roles/iam.serviceAccountUser"
+
+# Tạo và download CI service account key
+gcloud iam service-accounts keys create ~/roster-mapper-ci-key.json \
+    --iam-account=$SA_CI_EMAIL
+
+echo "✅ CI Service Account key saved to: ~/roster-mapper-ci-key.json"
+```
+
+**PowerShell (Windows):**
+```powershell
+# Tạo Service Account cho CI/CD
+gcloud iam service-accounts create roster-mapper-ci `
+    --display-name="Roster Mapper CI/CD Service Account"
+
+$PROJECT = gcloud config get-value project
+$SA_CI_EMAIL = "roster-mapper-ci@$PROJECT.iam.gserviceaccount.com"
+
+# Grant CI/CD roles
+gcloud projects add-iam-policy-binding $PROJECT `
+    --member="serviceAccount:$SA_CI_EMAIL" `
+    --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding $PROJECT `
+    --member="serviceAccount:$SA_CI_EMAIL" `
+    --role="roles/cloudbuild.builds.editor"
+
+gcloud projects add-iam-policy-binding $PROJECT `
+    --member="serviceAccount:$SA_CI_EMAIL" `
+    --role="roles/storage.objectViewer"
+
+gcloud projects add-iam-policy-binding $PROJECT `
+    --member="serviceAccount:$SA_CI_EMAIL" `
+    --role="roles/iam.serviceAccountUser"
+
+# Tạo và download CI service account key
+gcloud iam service-accounts keys create "$HOME\roster-mapper-ci-key.json" `
+    --iam-account=$SA_CI_EMAIL
+
+Write-Host "✅ CI Service Account key saved to: $HOME\roster-mapper-ci-key.json"
+```
+
+#### Bước 2: Setup GitHub Secrets
+
+Vào GitHub repo → Settings → Secrets and variables → Actions → New repository secret:
+
+| Secret Name | Value | Lấy từ đâu |
+|-------------|-------|------------|
+| `GCP_PROJECT` | Project ID | `gcloud config get-value project` |
+| `GCP_SA_KEY` | Nội dung JSON key | File `~/roster-mapper-ci-key.json` (Linux/Mac) hoặc `$HOME\roster-mapper-ci-key.json` (Windows) |
+
+**Cách lấy GCP_SA_KEY:**
+
+**Linux/Mac:**
+```bash
+cat ~/roster-mapper-ci-key.json
+# Copy toàn bộ output và paste vào GitHub Secret
+```
+
+**PowerShell (Windows):**
+```powershell
+Get-Content "$HOME\roster-mapper-ci-key.json"
+# Copy toàn bộ output và paste vào GitHub Secret
+```
+
+#### Bước 3: CI/CD Workflow
+
+File `.github/workflows/cloudrun-deploy.yml` đã được cấu hình sẵn. Chỉ cần:
+- Push code lên branch `main`
+- Workflow sẽ tự động: test → build → deploy
+
+**Lưu ý:** CI/CD workflow sẽ deploy với **single-instance** (min-instances 1, max-instances 1) để đảm bảo consistency.
 
 ## 👤 Author
 
@@ -817,8 +1000,10 @@ Internal use only - Vietjet Aviation Joint Stock Company
 
 ---
 
-**Version**: 1.2.0 (No-DB + Empty Mapping Support)  
+**Version**: 1.2.4 (No-DB + Empty Mapping Support + Single-Instance Deployment)  
 **Last Updated**: December 13, 2025  
 **Architecture**: No-DB (Metadata in JSON files, Ephemeral storage)  
+**Deployment**: Single-instance Cloud Run (min-instances 1, max-instances 1)  
+**UI Routes**: Chuyển sang dùng No-DB endpoints (`/api/v1/no-db-files/*`)  
 **Mapping Behavior**: Unmapped codes preserve original value (v1.0.1), Empty mapping supported
 

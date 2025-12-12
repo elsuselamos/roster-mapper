@@ -523,7 +523,7 @@ min_instances: 0  # Scale to zero
 
 ---
 
-**Version:** 1.2.0  
+**Version:** 1.2.4  
 **Last Updated:** 2025-12-10  
 **Maintainer:** datnguyentien@vietjetair.com
 

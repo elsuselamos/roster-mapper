@@ -2,7 +2,7 @@
 
 > **Bộ phận**: Quản lý Bảo dưỡng (Maintenance Ops)  
 > **Trạng thái**: Phase 2 - HOÀN THÀNH  
-> **Phiên bản**: v1.2.0  
+> **Phiên bản**: v1.2.4  
 > **⚠️ LƯU Ý**: File này dành cho local/Docker deployment. Để deploy lên Cloud Run, xem `README.md` - Section "🚀 Production Deployment"
 
 ---
@@ -297,4 +297,4 @@ pytest tests/test_mapper.py -v
 
 ---
 
-*Last updated: December 13, 2025 - v1.2.0 (Ephemeral File Lifecycle - No-DB)*
+*Last updated: December 13, 2025 - v1.2.4 (Single-Instance Deployment + UI Routes Updated)*

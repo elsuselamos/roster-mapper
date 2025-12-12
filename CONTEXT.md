@@ -24,10 +24,10 @@
 |-------|------------|-------|
 | **Phase 1** | ✅ 100% | Project skeleton, FastAPI, Mapper engine, tests |
 | **Phase 2** | ✅ 100% | Web UI, batch processing, multi-station, style preservation |
-| **Phase 2.5** | ✅ 100% | No-DB File Management (v1.2.0) |
+| **Phase 2.5** | ✅ 100% | No-DB File Management (v1.2.0 → v1.2.4) |
 | **Phase 3** | ⏸️ 0% | Authentication + Database Integration (future) |
 
-**Current Version**: `v1.2.0` (No-DB + Empty Mapping Support)
+**Current Version**: `v1.2.4` (No-DB + Empty Mapping Support + Single-Instance Deployment)
 
 ---
 
@@ -37,8 +37,8 @@
 roster-mapper/
 ├── app/
 │   ├── api/v1/           # API endpoints
-│   │   ├── upload.py     # Upload file API + Download (styled/plain)
-│   │   ├── no_db_files.py # No-DB file management API (v1.2.0)
+│   │   ├── upload.py     # Upload file API + Download (styled/plain) - Deprecated, UI dùng No-DB
+│   │   ├── no_db_files.py # No-DB file management API (v1.2.4) - ⭐ Recommended
 │   │   ├── admin.py      # Admin API
 │   │   ├── batch.py      # Batch processing API
 │   │   └── dashboard.py  # Dashboard stats API
@@ -210,22 +210,33 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 docker-compose up --build
 ```
 
-### Google Cloud Run (Production - No-DB)
+### Google Cloud Run (Production - No-DB, Single Instance)
 
 **Hướng dẫn đầy đủ:** Xem `README.md` - Section "🚀 Production Deployment"
 
-**Quick Start (No-DB):**
+**Quick Start (No-DB, Single Instance):**
 ```bash
 # Build và deploy (không cần Cloud SQL)
-gcloud builds submit --tag gcr.io/PROJECT/roster-mapper:latest -f docker/Dockerfile.cloudrun .
+PROJECT=$(gcloud config get-value project)
+SHORT_SHA=$(git rev-parse --short HEAD)
 
+# Build
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions "_SHORT_SHA=$SHORT_SHA"
+
+# Deploy (Single Instance)
 gcloud run deploy roster-mapper \
-    --image gcr.io/PROJECT/roster-mapper:latest \
+    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" \
     --region asia-southeast1 \
     --set-env-vars "STORAGE_DIR=/tmp/uploads,OUTPUT_DIR=/tmp/output,META_DIR=/tmp/meta" \
     --memory 1Gi \
-    --timeout 300
+    --timeout 300 \
+    --min-instances 1 \
+    --max-instances 1
 ```
+
+**Lưu ý:** Single-instance deployment giải quyết vấn đề multi-instance (files luôn tìm thấy trên cùng instance).
 
 **Tài liệu chi tiết:**
 - `README.md` - Step-by-step deployment guide (No-DB)
@@ -310,6 +321,7 @@ gcloud run deploy roster-mapper \
 | v1.0.2 | 08/12/2025 | Documentation update, Behavior Table, Separators Table |
 | v1.1.0 | 08/12/2025 | **Cloud Run Deployment** - Ephemeral storage, LibreOffice, CI/CD pipeline |
 | v1.2.0 | 13/12/2025 | **Ephemeral File Lifecycle (No-DB)** - No-DB File Management API, JSON metadata, auto-deletion, Empty mapping support |
+| v1.2.4 | 13/12/2025 | **Single-Instance Deployment** - Giải quyết vấn đề multi-instance, UI routes chuyển sang No-DB endpoints, CI/CD optional |
 
 ---
 
@@ -324,7 +336,7 @@ gcloud run deploy roster-mapper \
 | `app/utils/xls_converter.py` | LibreOffice XLS→XLSX converter |
 | `app/ui/routes.py` | Web UI routes |
 | `app/api/v1/upload.py` | Upload & Download API |
-| `app/api/v1/no_db_files.py` | No-DB file management API (v1.2.0) |
+| `app/api/v1/no_db_files.py` | No-DB file management API (v1.2.4) - ⭐ UI routes đã chuyển sang dùng endpoints này |
 | `app/api/v1/admin.py` | Admin API - Import CSV/JSON/Excel |
 | `mappings/HAN/latest.json` | HAN station mappings |
 | `templates/admin.html` | Admin UI với Import Modal |
@@ -332,7 +344,7 @@ gcloud run deploy roster-mapper \
 | `docker/Dockerfile.cloudrun` | Cloud Run optimized Dockerfile |
 | `.github/workflows/cloudrun-deploy.yml` | CI/CD pipeline cho Cloud Run |
 | `docs/NO_DB_DEPLOYMENT.md` | No-DB deployment guide |
-| `docs/FILE_LIFECYCLE.md` | Ephemeral file lifecycle documentation (v1.2.0) |
+| `docs/FILE_LIFECYCLE.md` | Ephemeral file lifecycle documentation (v1.2.4) |
 | `docs/IMPLEMENTATION_SUMMARY.md` | Implementation summary for No-DB files |
 
 ---
@@ -343,6 +355,7 @@ gcloud run deploy roster-mapper \
 - [ ] Implement mapping diff viewer in admin
 - [ ] Add batch download as ZIP
 - [x] Ephemeral file lifecycle with auto-deletion (v1.2.0 - No-DB)
+- [x] Single-instance deployment (v1.2.4 - Giải quyết multi-instance)
 - [ ] More station mappings needed (SGN, DAD, CXR, etc.)
 
 ---
@@ -360,9 +373,12 @@ Dự án được xây dựng qua các phase:
 - **Style preservation** - Giữ nguyên định dạng Excel gốc
 - **2 download options** - Styled (giữ format) vs Plain (text only)
 
-**Phase 2.5 (v1.2.0)**: 
+**Phase 2.5 (v1.2.0 → v1.2.4)**: 
 - **No-DB File Management** - Ephemeral file lifecycle với JSON metadata
 - **Cloud Run No-DB Deployment** - Deploy không cần database
+- **Single-Instance Deployment** (v1.2.4) - Giải quyết vấn đề multi-instance
+- **UI Routes Updated** (v1.2.4) - Chuyển sang dùng No-DB endpoints (`/api/v1/no-db-files/*`)
+- **CI/CD Optional** (v1.2.4) - Di chuyển CI/CD ra khỏi bước deploy chính
 
 **Phase 3** (Future - Chưa triển khai):
 - **Authentication** - User authentication & authorization
@@ -382,5 +398,5 @@ Dự án được xây dựng qua các phase:
 ---
 
 *Last updated: December 13, 2025*
-*Version: 1.2.0 (No-DB - Ephemeral File Lifecycle + Empty Mapping Support)*
-*Highlights: Empty mapping `{"BD1": ""}`, Unmapped preserve (v1.0.1), Cloud Run ready*
+*Version: 1.2.4 (No-DB - Ephemeral File Lifecycle + Empty Mapping Support + Single-Instance Deployment)*
+*Highlights: Empty mapping `{"BD1": ""}`, Unmapped preserve (v1.0.1), Single-instance deployment, UI routes dùng No-DB endpoints, CI/CD optional*

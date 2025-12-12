@@ -1,7 +1,7 @@
 # Implementation Summary - Ephemeral File Lifecycle (No-DB)
 
 **Date:** 2025-12-13  
-**Version:** v1.2.0  
+**Version:** v1.2.4  
 **Status:** ✅ Production Ready
 
 ---
@@ -263,5 +263,5 @@ Download → Stream file → Delete files + metadata JSON
 ---
 
 **Last Updated:** 2025-12-13  
-**Version:** v1.2.0 (No-DB)  
+**Version:** v1.2.4 (No-DB)  
 **Maintainer:** datnguyentien@vietjetair.com

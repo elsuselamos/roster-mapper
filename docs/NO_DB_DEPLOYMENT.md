@@ -12,14 +12,14 @@ File `app/api/v1/no_db_files.py` cung cấp các endpoints để xử lý upload
 
 ✅ **Phù hợp khi:**
 - Pilot / MVP / Demo
-- Single-instance deployment (hoặc chấp nhận rủi ro multi-instance)
+- **Single-instance deployment** (min-instances 1, max-instances 1) - ⭐ **Khuyến nghị**
 - Files chỉ cần tồn tại tạm thời (ephemeral)
 - Không cần audit trail lâu dài
-- Không cần chia sẻ metadata giữa các instances
+- **UI routes đã chuyển sang dùng No-DB endpoints** để giải quyết vấn đề multi-instance
 
 ❌ **Không phù hợp khi:**
 - Production với yêu cầu audit/compliance
-- Multi-instance Cloud Run với load balancing
+- Multi-instance Cloud Run với load balancing (nếu không dùng GCS)
 - Cần retry/resume mapping jobs
 - Cần lưu trữ lâu dài
 
@@ -70,23 +70,94 @@ File JSON tại `/tmp/meta/<file_id>.json`:
 | `MAX_UPLOAD_SIZE` | `52428800` (50MB) | Kích thước upload tối đa |
 | `FILE_TTL_SECONDS` | `3600` (1 hour) | Thời gian sống của files |
 
-### Cloud Run Deployment
+### Cloud Run Deployment (Single Instance)
 
 **Không cần Cloud SQL!** Chỉ cần:
 
+**Linux/Mac:**
 ```bash
+PROJECT=$(gcloud config get-value project)
+SHORT_SHA=$(git rev-parse --short HEAD)
+
+# Build
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions "_SHORT_SHA=$SHORT_SHA"
+
+# Deploy (Single Instance)
+SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
 gcloud run deploy roster-mapper \
-    --image gcr.io/PROJECT/roster-mapper:latest \
+    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" \
     --region asia-southeast1 \
     --platform managed \
     --allow-unauthenticated \
-    --set-env-vars "STORAGE_TYPE=local,STORAGE_DIR=/tmp/uploads,OUTPUT_DIR=/tmp/output,META_DIR=/tmp/meta,MAX_UPLOAD_SIZE=52428800,FILE_TTL_SECONDS=3600" \
+    --service-account "$SA_RUNNER_EMAIL" \
+    --set-env-vars "STORAGE_TYPE=local" \
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" \
+    --set-env-vars "OUTPUT_DIR=/tmp/output" \
+    --set-env-vars "TEMP_DIR=/tmp/temp" \
+    --set-env-vars "META_DIR=/tmp/meta" \
+    --set-env-vars "APP_ENV=production" \
+    --set-env-vars "LOG_LEVEL=INFO" \
+    --set-env-vars "DEBUG=false" \
+    --set-env-vars "AUTO_DETECT_STATION=true" \
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" \
+    --set-env-vars "FILE_TTL_SECONDS=3600" \
     --memory 1Gi \
     --cpu 1 \
-    --timeout 300
+    --timeout 300 \
+    --min-instances 1 \
+    --max-instances 1 \
+    --concurrency 80
 ```
 
-**Lưu ý:** Không cần:
+**PowerShell (Windows):**
+```powershell
+$PROJECT = gcloud config get-value project
+$SHORT_SHA = git rev-parse --short HEAD
+
+# Build
+gcloud builds submit `
+    --config cloudbuild.yaml `
+    --substitutions "_SHORT_SHA=$SHORT_SHA"
+
+# Deploy (Single Instance)
+$SA_RUNNER_EMAIL = "roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
+gcloud run deploy roster-mapper `
+    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" `
+    --region asia-southeast1 `
+    --platform managed `
+    --allow-unauthenticated `
+    --service-account $SA_RUNNER_EMAIL `
+    --set-env-vars "STORAGE_TYPE=local" `
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" `
+    --set-env-vars "OUTPUT_DIR=/tmp/output" `
+    --set-env-vars "TEMP_DIR=/tmp/temp" `
+    --set-env-vars "META_DIR=/tmp/meta" `
+    --set-env-vars "APP_ENV=production" `
+    --set-env-vars "LOG_LEVEL=INFO" `
+    --set-env-vars "DEBUG=false" `
+    --set-env-vars "AUTO_DETECT_STATION=true" `
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" `
+    --set-env-vars "FILE_TTL_SECONDS=3600" `
+    --memory 1Gi `
+    --cpu 1 `
+    --timeout 300 `
+    --min-instances 1 `
+    --max-instances 1 `
+    --concurrency 80
+```
+
+**Lưu ý về Single Instance:**
+- ✅ **Giải quyết vấn đề multi-instance**: Tất cả requests đến cùng 1 instance
+- ✅ **Files luôn tìm thấy**: Upload, process, download đều trên cùng instance
+- ⚠️ **Không có auto-scaling**: Nếu traffic cao, có thể chậm
+- ⚠️ **Instance restart**: Files trong `/tmp` sẽ mất (ephemeral storage)
+- ⚠️ **Chi phí**: Instance luôn chạy (không scale to zero)
+
+**Không cần:**
 - `--add-cloudsql-instances`
 - `--set-secrets DB_PASS=...`
 - Database environment variables
@@ -196,14 +267,15 @@ Check status của file.
 
 ## ⚠️ Rủi ro & Giới hạn
 
-### 1. Multi-instance Cloud Run
+### 1. Multi-instance Cloud Run (Đã giải quyết với Single Instance)
 
 **Vấn đề:** Nếu Cloud Run scale đến nhiều instances, metadata không được chia sẻ giữa instances.
 
-**Giải pháp:**
-- Dùng sticky sessions (không khuyến nghị)
-- Hoặc upgrade lên GCS + signed URLs (không cần DB)
-- Hoặc dùng database (Cloud SQL)
+**Giải pháp (Đã áp dụng):**
+- ✅ **Single-instance deployment** (min-instances 1, max-instances 1) - **Khuyến nghị**
+- ✅ **UI routes đã chuyển sang dùng No-DB endpoints** để đảm bảo consistency
+- Hoặc upgrade lên GCS + signed URLs (không cần DB) - cho multi-instance
+- Hoặc dùng database (Cloud SQL) - cho production với audit/compliance
 
 ### 2. Instance Crash
 

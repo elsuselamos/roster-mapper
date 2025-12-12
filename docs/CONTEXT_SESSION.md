@@ -1,7 +1,7 @@
 # Deployment Context & Quick Reference
 
 **Last Updated:** 2025-12-13  
-**Version:** 1.2.0 (No-DB + Empty Mapping Support)  
+**Version:** 1.2.4 (No-DB + Empty Mapping Support + Single-Instance Deployment)  
 **Status:** Production Ready
 
 ---
@@ -203,5 +203,5 @@ gcloud run logs read roster-mapper --region asia-southeast1 --limit 50
 ---
 
 **Last Updated:** 2025-12-13  
-**Version:** 1.2.0 (No-DB + Empty Mapping Support)  
+**Version:** 1.2.4 (No-DB + Empty Mapping Support + Single-Instance Deployment)  
 **Maintained by:** Vietjet AMO IT Department

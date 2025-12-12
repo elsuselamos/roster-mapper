@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 
 
 # Removed periodic_cleanup() - using No-DB cleanup task from no_db_files.py instead
-# The old database-backed cleanup is no longer needed in v1.2.0 (No-DB architecture)
+# The old database-backed cleanup is no longer needed in v1.2.0+ (No-DB architecture)
 
 
 @asynccontextmanager
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Ensure directories exist
     settings.ensure_directories()
     
-    # Start no-DB cleanup task (v1.2.0 - No-DB architecture)
+    # Start no-DB cleanup task (v1.2.0+ - No-DB architecture)
     try:
         from app.api.v1 import no_db_files
         no_db_files.start_cleanup_task()

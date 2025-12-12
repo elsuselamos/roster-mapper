@@ -290,9 +290,27 @@ async def check_processing_status(
     - "failed": Job failed
     - "not_found": Session ID not found
     """
-    # Method 1: Check OUTPUT_DIR/results/{session_id}.json (preferred)
+    # Method 1: Check No-DB metadata JSON (preferred - works across instances)
+    try:
+        from app.api.v1.no_db_files import load_session_results
+        results_data = load_session_results(session_id)
+        if results_data:
+            results = results_data.get("results", [])
+            logger.info(f"Status check: Found results for session_id={session_id}, {len(results)} files")
+            return StatusResponse(
+                status="completed",
+                session_id=session_id,
+                message=f"Processing completed. {len(results)} file(s) processed.",
+                results={"files": results}
+            )
+    except Exception as e:
+        logger.warning(f"Error loading results from metadata: {e}")
+    
+    # Method 2: Check OUTPUT_DIR/results/{session_id}.json (fallback for backward compatibility)
     results_dir = settings.OUTPUT_DIR / "results"
     results_path = results_dir / f"{session_id}.json"
+    
+    logger.info(f"Status check: Looking for results at {results_path}, exists={results_path.exists()}, OUTPUT_DIR={settings.OUTPUT_DIR}")
     
     if results_path.exists():
         try:
@@ -316,7 +334,7 @@ async def check_processing_status(
                 message=f"Error reading results: {str(e)}"
             )
     
-    # Method 2: Check TEMP_DIR/session_results.json (fallback for same-instance)
+    # Method 3: Check TEMP_DIR/session_results.json (fallback for same-instance)
     fallback_path = settings.TEMP_DIR / "session_results.json"
     if fallback_path.exists():
         try:
