@@ -195,3 +195,5 @@ jobs:
           echo "- 📖 API Docs: ${{ env.SERVICE_URL }}/docs" >> $GITHUB_STEP_SUMMARY
           echo "- 🔧 Admin: ${{ env.SERVICE_URL }}/admin" >> $GITHUB_STEP_SUMMARY
           echo "- ❤️ Health: ${{ env.SERVICE_URL }}/health" >> $GITHUB_STEP_SUMMARY
+
+

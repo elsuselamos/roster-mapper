@@ -255,3 +255,5 @@ def smart_convert_xls(
     
     # Try fallback
     return convert_xls_to_xlsx_fallback(xls_path, output_dir)
+
+

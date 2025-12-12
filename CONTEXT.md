@@ -24,9 +24,10 @@
 |-------|------------|-------|
 | **Phase 1** | ✅ 100% | Project skeleton, FastAPI, Mapper engine, tests |
 | **Phase 2** | ✅ 100% | Web UI, batch processing, multi-station, style preservation |
-| **Phase 3** | ⏸️ 0% | Authentication (chưa yêu cầu) |
+| **Phase 2.5** | ✅ 100% | No-DB File Management (v1.2.0) |
+| **Phase 3** | ⏸️ 0% | Authentication + Database Integration (future) |
 
-**Current Version**: `v1.1.0`
+**Current Version**: `v1.2.0`
 
 ---
 
@@ -37,6 +38,7 @@ roster-mapper/
 ├── app/
 │   ├── api/v1/           # API endpoints
 │   │   ├── upload.py     # Upload file API + Download (styled/plain)
+│   │   ├── no_db_files.py # No-DB file management API (v1.2.0)
 │   │   ├── admin.py      # Admin API
 │   │   ├── batch.py      # Batch processing API
 │   │   └── dashboard.py  # Dashboard stats API
@@ -52,16 +54,15 @@ roster-mapper/
 │   ├── core/
 │   │   ├── config.py     # Pydantic settings
 │   │   └── logging.py    # Structured logging
-│   ├── db/
-│   │   ├── database.py   # DB connection
-│   │   └── models.py     # SQLAlchemy models
 │   └── main.py           # FastAPI app entry
 ├── templates/            # Jinja2 HTML templates
 ├── static/               # CSS, JS, favicon
 ├── mappings/             # JSON mapping files per station
 ├── tests/                # Pytest test files
 ├── docs/                 # Documentation
-│   └── DEPLOY_CLOUDRUN.md  # Cloud Run deployment guide
+│   ├── NO_DB_DEPLOYMENT.md  # No-DB deployment guide
+│   ├── FILE_LIFECYCLE.md   # Ephemeral file lifecycle
+│   └── IMPLEMENTATION_SUMMARY.md  # Implementation summary
 ├── docker/               # Dockerfile
 │   ├── Dockerfile        # Local/Docker Compose
 │   └── Dockerfile.cloudrun  # Cloud Run optimized
@@ -209,15 +210,27 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 docker-compose up --build
 ```
 
-### Google Cloud Run
+### Google Cloud Run (Production - No-DB)
 
+**Hướng dẫn đầy đủ:** Xem `README.md` - Section "🚀 Production Deployment"
+
+**Quick Start (No-DB):**
 ```bash
-# Build và deploy
-gcloud builds submit --tag gcr.io/PROJECT/roster-mapper:1.1.0 -f docker/Dockerfile.cloudrun .
-gcloud run deploy roster-mapper --image gcr.io/PROJECT/roster-mapper:1.1.0 --region asia-southeast1
+# Build và deploy (không cần Cloud SQL)
+gcloud builds submit --tag gcr.io/PROJECT/roster-mapper:latest -f docker/Dockerfile.cloudrun .
+
+gcloud run deploy roster-mapper \
+    --image gcr.io/PROJECT/roster-mapper:latest \
+    --region asia-southeast1 \
+    --set-env-vars "STORAGE_DIR=/tmp/uploads,OUTPUT_DIR=/tmp/output,META_DIR=/tmp/meta" \
+    --memory 1Gi \
+    --timeout 300
 ```
 
-Xem chi tiết: `docs/DEPLOY_CLOUDRUN.md`
+**Tài liệu chi tiết:**
+- `README.md` - Step-by-step deployment guide (No-DB)
+- `docs/NO_DB_DEPLOYMENT.md` - No-DB deployment guide
+- `docs/FILE_LIFECYCLE.md` - Ephemeral file lifecycle documentation
 
 ### Access
 
@@ -296,6 +309,7 @@ Xem chi tiết: `docs/DEPLOY_CLOUDRUN.md`
 | v1.0.1 | 08/12/2025 | Import Mapping Modal, Gunicorn timeout, Empty mapping, Unmapped → Empty |
 | v1.0.2 | 08/12/2025 | Documentation update, Behavior Table, Separators Table |
 | v1.1.0 | 08/12/2025 | **Cloud Run Deployment** - Ephemeral storage, LibreOffice, CI/CD pipeline |
+| v1.2.0 | 13/12/2025 | **Ephemeral File Lifecycle (No-DB)** - No-DB File Management API, JSON metadata, auto-deletion |
 
 ---
 
@@ -310,13 +324,16 @@ Xem chi tiết: `docs/DEPLOY_CLOUDRUN.md`
 | `app/utils/xls_converter.py` | LibreOffice XLS→XLSX converter |
 | `app/ui/routes.py` | Web UI routes |
 | `app/api/v1/upload.py` | Upload & Download API |
+| `app/api/v1/no_db_files.py` | No-DB file management API (v1.2.0) |
 | `app/api/v1/admin.py` | Admin API - Import CSV/JSON/Excel |
 | `mappings/HAN/latest.json` | HAN station mappings |
 | `templates/admin.html` | Admin UI với Import Modal |
 | `docker/Dockerfile` | Docker config (timeout 300s) |
 | `docker/Dockerfile.cloudrun` | Cloud Run optimized Dockerfile |
 | `.github/workflows/cloudrun-deploy.yml` | CI/CD pipeline cho Cloud Run |
-| `docs/DEPLOY_CLOUDRUN.md` | Cloud Run deployment guide |
+| `docs/NO_DB_DEPLOYMENT.md` | No-DB deployment guide |
+| `docs/FILE_LIFECYCLE.md` | Ephemeral file lifecycle documentation (v1.2.0) |
+| `docs/IMPLEMENTATION_SUMMARY.md` | Implementation summary for No-DB files |
 
 ---
 
@@ -325,7 +342,7 @@ Xem chi tiết: `docs/DEPLOY_CLOUDRUN.md`
 - [ ] Add authentication (currently NO-AUTH)
 - [ ] Implement mapping diff viewer in admin
 - [ ] Add batch download as ZIP
-- [ ] Database persistence for audit logs
+- [x] Ephemeral file lifecycle with auto-deletion (v1.2.0 - No-DB)
 - [ ] More station mappings needed (SGN, DAD, CXR, etc.)
 
 ---
@@ -343,9 +360,26 @@ Dự án được xây dựng qua các phase:
 - **Style preservation** - Giữ nguyên định dạng Excel gốc
 - **2 download options** - Styled (giữ format) vs Plain (text only)
 
-**Phase 3**: Authentication (chưa yêu cầu, tạm dừng)
+**Phase 2.5 (v1.2.0)**: 
+- **No-DB File Management** - Ephemeral file lifecycle với JSON metadata
+- **Cloud Run No-DB Deployment** - Deploy không cần database
+
+**Phase 3** (Future - Chưa triển khai):
+- **Authentication** - User authentication & authorization
+- **Database Integration** - Cloud SQL (Postgres) cho production
+  - **Local Development**: PostgreSQL với `DATABASE_URL` (asyncpg driver)
+  - **Production**: Google Cloud SQL (Postgres 15) với Cloud SQL Python Connector
+  - **Connection Pool**: Configurable (pool_size=3, max_overflow=10)
+  - **Security**: Private IP, no public access
+  - **Migrations**: Alembic với Cloud SQL Connector
+  - **Models**: 
+    - `MappingVersion` - Mapping versions per station
+    - `AuditLog` - System audit logs
+    - `UploadMeta` - Uploaded file metadata
+    - `ProcessedFile` - Processed file lifecycle tracking
+  - **Tài liệu**: Xem `docs/DB_MIGRATION.md` và `docs/CLOUD_SQL_SETUP.md` (deprecated, sẽ được cập nhật khi triển khai Phase 3)
 
 ---
 
-*Last updated: December 8, 2025*
-*Version: 1.1.0*
+*Last updated: December 13, 2025*
+*Version: 1.2.0 (No-DB - Ephemeral File Lifecycle)*

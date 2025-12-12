@@ -552,7 +552,7 @@ class ExcelProcessor:
                 for cell in row:
                     if cell.value is not None:
                         original_value = str(cell.value)
-                        mapped_value = mapper_func(original_value)
+                        mapped_value = mapper_func(cell.value)
                         
                         # Only update if value changed
                         if mapped_value != original_value:

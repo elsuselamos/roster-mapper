@@ -183,3 +183,65 @@ class AuditAction:
     MAPPING_DELETED = "mapping_deleted"
     MAPPING_IMPORTED = "mapping_imported"
 
+
+class ProcessedFile(Base):
+    """
+    Metadata for processed/mapped files.
+    
+    Tracks output files and their lifecycle for ephemeral storage.
+    Links to UploadMeta via upload_id (file_id from upload).
+    """
+    
+    __tablename__ = "processed_files"
+    
+    id: int = Column(Integer, primary_key=True, autoincrement=True)
+    file_id: str = Column(String(36), nullable=False, unique=True, index=True)
+    upload_id: str = Column(String(36), nullable=False, index=True)  # Links to UploadMeta.file_id
+    upload_path: str = Column(String(512), nullable=False)  # Full path to uploaded file
+    output_path: str = Column(String(512), nullable=False)  # Full path to processed file
+    output_path_plain: Optional[str] = Column(String(512), nullable=True)  # Plain format path if exists
+    station: str = Column(String(10), nullable=False)
+    format_type: str = Column(String(20), nullable=False, default="styled")  # "styled" or "plain"
+    status: str = Column(String(20), nullable=False, default="ready")  # "ready", "downloading", "deleted"
+    file_size: int = Column(Integer, nullable=False, default=0)
+    created_at: datetime = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    downloaded_at: Optional[datetime] = Column(DateTime, nullable=True)
+    deleted_at: Optional[datetime] = Column(DateTime, nullable=True)
+    expires_at: Optional[datetime] = Column(DateTime, nullable=True, index=True)
+    
+    __table_args__ = (
+        Index("ix_processed_status", "status"),
+        Index("ix_processed_expires", "expires_at"),
+        Index("ix_processed_upload", "upload_id"),
+    )
+    
+    def __repr__(self) -> str:
+        return f"<ProcessedFile(file_id={self.file_id}, status={self.status})>"
+    
+    def to_dict(self) -> dict:
+        """Convert model to dictionary."""
+        return {
+            "id": self.id,
+            "file_id": self.file_id,
+            "upload_id": self.upload_id,
+            "upload_path": self.upload_path,
+            "output_path": self.output_path,
+            "output_path_plain": self.output_path_plain,
+            "station": self.station,
+            "format_type": self.format_type,
+            "status": self.status,
+            "file_size": self.file_size,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "downloaded_at": self.downloaded_at.isoformat() if self.downloaded_at else None,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+        }
+
+
+# Status constants for ProcessedFile
+class ProcessedFileStatus:
+    """Constants for processed file status values."""
+    READY = "ready"
+    DOWNLOADING = "downloading"
+    DELETED = "deleted"
+    EXPIRED = "expired"

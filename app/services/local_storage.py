@@ -301,3 +301,5 @@ class LocalStorage:
 
 # Global instance for easy import
 local_storage = LocalStorage()
+
+

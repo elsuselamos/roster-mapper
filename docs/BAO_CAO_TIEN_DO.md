@@ -8,9 +8,9 @@
 |-----------|----------|
 | **Dự án** | Roster Mapper - Công cụ chuyển đổi mã roster |
 | **Bộ phận** | Quản lý Bảo dưỡng (Maintenance Ops) |
-| **Phiên bản** | v1.1.0 |
-| **Ngày báo cáo** | 05/12/2025 (cập nhật 08/12/2025) |
-| **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** |
+| **Phiên bản** | v1.2.0 (Ephemeral File Lifecycle - No-DB) |
+| **Ngày báo cáo** | 13/12/2025 |
+| **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** + **No-DB Production Ready** |
 | **Website** | vietjetair.com |
 
 ---
@@ -19,7 +19,14 @@
 
 Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ các station (SGN, HAN, DAD, CXR, HPH, VCA, VII) sang mã chuẩn HR.
 
-Đến thời điểm báo cáo, hệ thống đã **hoàn thành Phase 2**, vận hành ổn định, chạy qua Docker, môi trường local, và **Google Cloud Run**. Sẵn sàng đưa vào thử nghiệm nội bộ và production deployment.
+Đến thời điểm báo cáo, hệ thống đã **hoàn thành Phase 2**, vận hành ổn định, chạy qua Docker, môi trường local, và **Google Cloud Run**. 
+
+**Tính năng mới nhất (v1.2.0):**
+- ✅ **Ephemeral File Lifecycle**: Auto-deletion, TTL cleanup, Files API
+- ✅ **No-DB Architecture**: Metadata lưu trong JSON files, không cần database
+- ✅ **Complete Deployment Guide**: Hướng dẫn đầy đủ trong `README.md`
+
+Sẵn sàng đưa vào thử nghiệm nội bộ và production deployment.
 
 ---
 
@@ -103,10 +110,13 @@ Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ c
 | Source Code | ✅ Done | GitHub: elsuselamos/roster-mapper |
 | Docker | ✅ Done | Multi-stage Dockerfile |
 | Docker Hub CI/CD | ✅ Done | GitHub Actions |
-| **Cloud Run Deployment** | ✅ **MỚI** | Google Cloud Run với ephemeral storage |
-| **CI/CD Pipeline** | ✅ **MỚI** | Auto build & deploy qua GitHub Actions |
+| **Cloud Run Deployment** | ✅ Done | Google Cloud Run với ephemeral storage |
+| **CI/CD Pipeline** | ✅ Done | Auto build & deploy qua GitHub Actions |
+| **Ephemeral File Lifecycle** | ✅ v1.2.0 | Auto-delete files sau download, TTL cleanup |
+| **Files API** | ✅ v1.2.0 | `/api/v1/no-db-files/*` - Upload/Map/Download với auto-cleanup |
+| **No-DB Architecture** | ✅ v1.2.0 | Metadata lưu trong JSON files, không cần database |
 | Tests | ✅ Done | 79 tests PASS |
-| Documentation | ✅ Done | CONTEXT.md, DEPLOY_CLOUDRUN.md, API specs |
+| Documentation | ✅ Done | CONTEXT.md, README.md, API specs, DB_MIGRATION.md, NO_DB_DEPLOYMENT.md |
 
 ---
 
@@ -205,33 +215,65 @@ docker run -p 8000:8000 roster-mapper:local
 
 ---
 
-## VIII. ĐỀ XUẤT TIẾP THEO (NEXT STEPS)
+## VIII. DEPLOYMENT STATUS
 
-| STT | Công việc | Ưu tiên | Ghi chú |
-|-----|-----------|---------|---------|
-| 1 | Thu thập file mapping thực tế từ SGN/DAD/CXR… | ⭐ Cao | Cần dữ liệu từ station |
-| 2 | Test với file roster thật của từng station | ⭐ Cao | Quan trọng |
-| 3 | Tạo Docker Hub CI/CD pipeline cho server nội bộ | Trung bình | Sẵn workflow |
-| 4 | Chuẩn bị server nội bộ (Docker Compose) | Trung bình | Chạy offline |
-| 5 | Training station admins | Thấp | Sau khi deploy |
+### ✅ Đã sẵn sàng Production
+
+| Deployment Option | Status | Use Case | Documentation |
+|-------------------|--------|----------|---------------|
+| **Cloud Run + Cloud SQL** | ✅ Ready | Production với audit trail | `README.md` - Section "🚀 Production Deployment" |
+| **Cloud Run No-DB** | ✅ Ready | Pilot/MVP, single-instance | `docs/NO_DB_DEPLOYMENT.md` |
+| **Docker Compose** | ✅ Ready | Local/On-premise | `README.md` - Option 3 |
+
+### 📋 Deployment Checklist
+
+**Pre-deployment:**
+- [x] Code hoàn chỉnh và tested (79/79 tests pass)
+- [x] Cloud SQL setup guide (`docs/DB_MIGRATION.md`)
+- [x] No-DB deployment guide (`docs/NO_DB_DEPLOYMENT.md`)
+- [x] Complete deployment guide (`README.md`)
+- [x] CI/CD pipeline configured
+- [x] Health checks implemented
+- [x] Documentation đầy đủ
+
+**Ready for:**
+- [x] Production deployment với Cloud SQL
+- [x] Pilot deployment không cần database
+- [x] Local/On-premise deployment
 
 ---
 
-## IX. TIẾN ĐỘ TỔNG THỂ
+## IX. ĐỀ XUẤT TIẾP THEO (NEXT STEPS)
+
+| STT | Công việc | Ưu tiên | Ghi chú |
+|-----|-----------|---------|---------|
+| 1 | **Deploy lên Cloud Run Production** | ⭐⭐⭐ Cao | Follow `README.md` - Section "🚀 Production Deployment" |
+| 2 | Thu thập file mapping thực tế từ SGN/DAD/CXR… | ⭐⭐ Trung bình | Cần dữ liệu từ station |
+| 3 | Test với file roster thật của từng station | ⭐⭐ Trung bình | Quan trọng |
+| 4 | Monitor production performance | ⭐⭐ Trung bình | Sau khi deploy |
+| 5 | Training station admins | ⭐ Thấp | Sau khi deploy |
+
+---
+
+## X. TIẾN ĐỘ TỔNG THỂ
 
 ```
 Phase 1: Project Setup & Core Engine     [██████████] 100%
 Phase 2: Web UI & Multi-sheet            [██████████] 100%
+Phase 2.5: Cloud Deployment              [██████████] 100%
+  ├─ Cloud Run Support (v1.1.0)         [██████████] 100%
+  └─ Ephemeral File Lifecycle (v1.2.0)  [██████████] 100%
 Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 ```
 
-**Tổng tiến độ Phase 1-2: 100%**
+**Tổng tiến độ Phase 1-2.5: 100%**  
+**Production Ready: ✅ YES**
 
 ---
 
-## X. KẾT LUẬN ÔNG THẦU
+## XI. KẾT LUẬN ÔNG THẦU
 
-> **"Hệ thống Roster Mapper đã hoàn thành Phase 2, sẵn sàng đưa vào pilot thực tế và production deployment.**
+> **"Hệ thống Roster Mapper đã hoàn thành Phase 2 và Cloud Deployment (Phase 2.5), sẵn sàng đưa vào production deployment.**
 > 
 > **Các điểm nổi bật:**
 > - ✅ Engine ổn định, xử lý 16,000+ cells < 10 giây
@@ -242,13 +284,23 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 > - ✅ **Empty mapping**: Hỗ trợ xóa code không cần thiết
 > - ✅ **Unmapped → Empty**: Code không có mapping sẽ thành rỗng
 > - ✅ **Cloud Run Deployment** (v1.1.0): Hỗ trợ deploy lên Google Cloud Run với ephemeral storage
+> - ✅ **Ephemeral File Lifecycle** (v1.2.0): Auto-deletion, TTL cleanup, No-DB File Management API
 > - ✅ **CI/CD Pipeline**: Tự động build & deploy qua GitHub Actions
 > - ✅ **LibreOffice Integration**: Hỗ trợ convert .xls → .xlsx
+> - ✅ **Complete Deployment Guide**: Hướng dẫn đầy đủ trong `README.md`
 > - ✅ Batch hoạt động tốt
 > - ✅ Mapping versioning đầy đủ
 > - ✅ Không yêu cầu đăng nhập
 > 
-> **Tiếp theo cần dữ liệu thực từ các station để hoàn thiện production rollout."**
+> **Deployment:**
+> - **Cloud Run (No-DB)**: Đơn giản, không cần setup database - **SẴN SÀNG PRODUCTION**
+> - **Local/On-premise**: Docker Compose - Chạy offline
+> 
+> **Hệ thống đã sẵn sàng cho production deployment. Tiếp theo cần:**
+> 1. Deploy lên Cloud Run Production (follow `README.md`)
+> 2. Thu thập dữ liệu mapping thực tế từ các station
+> 3. Test với file roster thật
+> 4. Training station admins"
 
 ---
 
@@ -281,19 +333,40 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 - Tự động hiện khi upload/preview/mapping
 - Giúp user biết app đang xử lý
 
-### 6. Cloud Run Deployment (v1.1.0 - MỚI)
+### 6. Cloud Run Deployment (v1.1.0)
 - 🚀 **Google Cloud Run Support**: Deploy lên Cloud Run với ephemeral storage
 - 📦 **LocalStorage Adapter**: Quản lý file tạm trong `/tmp` (ephemeral)
 - 🔄 **LibreOffice Integration**: Tự động convert .xls → .xlsx
 - ⚙️ **CI/CD Pipeline**: GitHub Actions tự động build & deploy
 - 📊 **Enhanced Health Check**: Kiểm tra storage, Cloud Run detection
-- 📖 **Deployment Guide**: Tài liệu chi tiết trong `docs/DEPLOY_CLOUDRUN.md`
+- 📖 **Deployment Guide**: Tài liệu chi tiết trong `README.md` - Section "🚀 Production Deployment"
+
+### 7. Ephemeral File Lifecycle (v1.2.0 - No-DB)
+- 🗑️ **Auto-deletion**: Files tự động xóa sau khi download hoàn tất
+- ⏰ **TTL Cleanup**: Background job dọn dẹp files quá hạn (1 giờ)
+- 🔒 **Security**: Filename sanitization, size limits, secure headers
+- 📊 **JSON Metadata**: Metadata lưu trong JSON files (`/tmp/meta/`)
+- 🔄 **No-DB File API**: Endpoints `/api/v1/no-db-files/*` cho ephemeral storage
+- 🚀 **No-DB Architecture**: Không cần database, đơn giản và dễ deploy
+- 📖 **Documentation**: `docs/NO_DB_DEPLOYMENT.md`, `docs/FILE_LIFECYCLE.md`
 
 ---
 
-## XI. CHANGELOG - VERSION 1.1.0
+## XII. CHANGELOG
 
-### Cloud Run Deployment Features
+### VERSION 1.2.0 (13/12/2025) - Ephemeral File Lifecycle (No-DB)
+
+| Feature | Mô tả |
+|---------|-------|
+| **No-DB File API** | `/api/v1/no-db-files/*` - Upload/Map/Download với auto-deletion |
+| **Auto-deletion** | Files tự động xóa sau download (background task) |
+| **TTL Cleanup** | Periodic job dọn dẹp files quá hạn (1 giờ) |
+| **JSON Metadata** | Metadata lưu trong JSON files (`/tmp/meta/`), không cần database |
+| **No-DB Architecture** | Đơn giản, dễ deploy, không cần setup database |
+| **Security** | Filename sanitization, size limits, secure headers |
+| **Documentation** | `NO_DB_DEPLOYMENT.md`, `FILE_LIFECYCLE.md` - Complete guides |
+
+### VERSION 1.1.0 (08/12/2025) - Cloud Run Deployment
 
 | Feature | Mô tả |
 |---------|-------|
@@ -302,10 +375,28 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 | **Dockerfile.cloudrun** | Optimized Dockerfile cho Cloud Run (port 8080) |
 | **CI/CD Pipeline** | GitHub Actions tự động deploy |
 | **Health Endpoint** | Enhanced với storage check |
-| **Documentation** | `DEPLOY_CLOUDRUN.md` với hướng dẫn đầy đủ |
+| **Documentation** | `README.md` - Section "🚀 Production Deployment" với hướng dẫn đầy đủ |
+
+---
+
+## XIII. TÀI LIỆU THAM KHẢO
+
+### Deployment Guides
+- **`README.md`** - Section "🚀 Production Deployment" - Hướng dẫn đầy đủ deploy Cloud Run
+- **`docs/NO_DB_DEPLOYMENT.md`** - No-DB deployment guide (Pilot/MVP)
+- **`docs/CONTEXT_SESSION.md`** - Deployment quick reference
+
+### API Documentation
+- **`docs/API_SPEC.md`** - Complete API specification
+- **`docs/FILE_LIFECYCLE.md`** - Ephemeral file lifecycle
+
+### Project Context
+- **`CONTEXT.md`** - Project context và architecture
+- **`README.md`** - Complete project documentation
 
 ---
 
 **© 2025 Vietjet AMO - IT Department**
 
-*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 12/12/2025 (v1.1.0)*
+*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 13/12/2025 (v1.2.0 - Ephemeral File Lifecycle - No-DB)*  
+*Status: ✅ Production Ready - Sẵn sàng deploy lên Cloud Run (No-DB)*

@@ -308,13 +308,21 @@ async def update_station(
 @router.post("/process", response_class=HTMLResponse)
 async def process_files(request: Request):
     """Process all files with multiple sheets and redirect to results."""
+    logger.info("POST /process called", 
+                accept_header=request.headers.get("accept", ""),
+                content_type=request.headers.get("content-type", ""))
+    
     session_path = settings.TEMP_DIR / "session_upload.json"
     
     if not session_path.exists():
+        logger.warning(f"Session file not found: {session_path}")
         return RedirectResponse(url="/upload", status_code=302)
     
+    logger.info(f"Reading session data from: {session_path}")
     with open(session_path, "r") as f:
         session_data = json.load(f)
+    
+    logger.info(f"Session data loaded: {len(session_data.get('files', []))} file(s)")
     
     storage = StorageService()
     processor = ExcelProcessor()
@@ -345,13 +353,16 @@ async def process_files(request: Request):
             
             # ========== FORMAT 1: STYLED (preserve formatting) ==========
             # Copy original file and map directly to preserve styles
+            logger.info(f"Processing styled format for file_id: {file_info['file_id']}")
             styled_path = storage.copy_file_for_processing(file_info["file_id"], "styled")
+            logger.info(f"Styled file path: {styled_path}")
             styled_stats = processor.map_workbook_preserve_style(
                 source_path=file_path,
                 dest_path=styled_path,
                 mapper_func=mapper.map_cell,
                 sheet_names=selected_sheets
             )
+            logger.info(f"Styled file saved: {styled_path}, exists: {styled_path.exists()}")
             
             # Aggregate stats from styled processing
             # styled_stats has structure: {sheets_processed, total_cells_mapped, total_cells_unchanged, sheet_stats: {sheet_name: {mapped, unchanged, total}}}
@@ -380,19 +391,31 @@ async def process_files(request: Request):
                     logger.error(f"Error processing sheet {sheet} for plain format: {e}")
             
             if mapped_sheets:
-                storage.save_processed_file_multi_sheet(
-                    file_info["file_id"] + "_plain",
-                    mapped_sheets
+                # Save plain format file (text only, no formatting)
+                # Use original file_id, not file_id + "_plain"
+                logger.info(f"Processing plain format for file_id: {file_info['file_id']}, {len(mapped_sheets)} sheets")
+                plain_path = storage.save_processed_file_multi_sheet(
+                    file_info["file_id"],
+                    mapped_sheets,
+                    format_type="plain"
                 )
+                logger.info(f"Plain format file saved: {plain_path}, exists: {plain_path.exists()}, size: {plain_path.stat().st_size if plain_path.exists() else 0} bytes")
                 
+            # Build download URLs
+            download_url_styled = f"/api/v1/download/{file_info['file_id']}?format=styled"
+            download_url_plain = f"/api/v1/download/{file_info['file_id']}?format=plain"
+            
+            logger.info(f"File processed successfully: {file_info['file_id']}, "
+                       f"styled_url: {download_url_styled}, plain_url: {download_url_plain}")
+            
             results.append({
                 "file_id": file_info["file_id"],
                 "filename": file_info["filename"],
                 "station": file_info["station"],
                 "stats": total_stats,
                 "sheet_results": sheet_results,
-                "download_url_styled": f"/api/v1/download/{file_info['file_id']}?format=styled",
-                "download_url_plain": f"/api/v1/download/{file_info['file_id']}?format=plain"
+                "download_url_styled": download_url_styled,
+                "download_url_plain": download_url_plain
             })
                 
         except Exception as e:

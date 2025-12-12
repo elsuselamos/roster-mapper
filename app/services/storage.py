@@ -131,6 +131,8 @@ class StorageService:
         """
         Get the path to a processed file.
         
+        Uses OUTPUT_DIR on Cloud Run, or storage_dir/processed locally.
+        
         Args:
             file_id: The file identifier.
             format_type: "styled" (preserve formatting) or "plain" (text only).
@@ -138,9 +140,15 @@ class StorageService:
         Returns:
             Path to the processed file.
         """
+        # Use OUTPUT_DIR if available (Cloud Run), otherwise use storage_dir/processed
+        if hasattr(settings, 'OUTPUT_DIR') and settings.OUTPUT_DIR:
+            output_base = settings.OUTPUT_DIR
+        else:
+            output_base = self.storage_dir / "processed"
+        
         if format_type == "plain":
-            return self.storage_dir / "processed" / f"{file_id}_mapped_plain.xlsx"
-        return self.storage_dir / "processed" / f"{file_id}_mapped.xlsx"
+            return output_base / f"{file_id}_mapped_plain.xlsx"
+        return output_base / f"{file_id}_mapped.xlsx"
     
     def save_processed_file(
         self,
@@ -169,7 +177,8 @@ class StorageService:
     def save_processed_file_multi_sheet(
         self,
         file_id: str,
-        sheets_data: Dict[str, pd.DataFrame]
+        sheets_data: Dict[str, pd.DataFrame],
+        format_type: str = "styled"
     ) -> Path:
         """
         Save multiple processed DataFrames to separate sheets in one Excel file.
@@ -181,11 +190,12 @@ class StorageService:
         Args:
             file_id: The original file identifier.
             sheets_data: Dictionary of sheet_name -> DataFrame.
+            format_type: "styled" (default) or "plain" for text-only output.
             
         Returns:
             Path to the saved file.
         """
-        output_path = self.get_processed_file_path(file_id)
+        output_path = self.get_processed_file_path(file_id, format_type=format_type)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
@@ -205,17 +215,18 @@ class StorageService:
     
     def copy_file_for_processing(self, file_id: str, format_type: str = "styled") -> Path:
         """
-        Copy uploaded file to processed directory for in-place mapping.
+        Copy uploaded file to processing location for style preservation.
         
+        Uses OUTPUT_DIR on Cloud Run, or storage_dir/processed locally.
         This is used for style-preserving mapping where we modify the 
         Excel file directly instead of creating a new one.
         
         Args:
             file_id: The file identifier.
-            format_type: "styled" or "plain".
+            format_type: "styled" (preserve formatting) or "plain" (text only).
             
         Returns:
-            Path to the copied file in processed directory.
+            Path to the copied file (ready for processing).
         """
         source_path = self.get_uploaded_file_path(file_id)
         dest_path = self.get_processed_file_path(file_id, format_type)

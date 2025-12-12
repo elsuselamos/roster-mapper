@@ -1,8 +1,9 @@
-# 🚀 HƯỚNG DẪN TRIỂN KHAI - Roster Mapper v0.2.0
+# 🚀 HƯỚNG DẪN TRIỂN KHAI - Roster Mapper
 
 > **Bộ phận**: Quản lý Bảo dưỡng (Maintenance Ops)  
 > **Trạng thái**: Phase 2 - HOÀN THÀNH  
-> **Phiên bản**: v0.2.0
+> **Phiên bản**: v1.2.0  
+> **⚠️ LƯU Ý**: File này dành cho local/Docker deployment. Để deploy lên Cloud Run, xem `README.md` - Section "🚀 Production Deployment"
 
 ---
 
@@ -283,4 +284,17 @@ pytest tests/test_mapper.py -v
 
 ---
 
-*Last updated: December 2024 - Phase 2 Release*
+---
+
+## 🔗 Related Documentation
+
+- **Cloud Run Deployment**: `README.md` - Section "🚀 Production Deployment" - Hướng dẫn đầy đủ deploy Cloud Run
+- **No-DB Deployment**: `docs/NO_DB_DEPLOYMENT.md` - Deploy không cần database (Pilot/MVP)
+- **Database Migration**: `docs/DB_MIGRATION.md` - Cloud SQL setup & migrations
+- **File Lifecycle**: `docs/FILE_LIFECYCLE.md` - Ephemeral file management
+- **API Specification**: `docs/API_SPEC.md` - Complete API documentation
+- **Deployment Context**: `docs/CONTEXT_SESSION.md` - Quick reference deployment
+
+---
+
+*Last updated: December 13, 2025 - v1.2.0 (Ephemeral File Lifecycle - No-DB)*

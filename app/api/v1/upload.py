@@ -241,22 +241,34 @@ async def download_file(
         format: 'styled' to keep original formatting (colors, fonts, etc.)
                 'plain' for clean text-only output (like CSV in Excel)
     """
+    logger.info(f"Download request: file_id={file_id}, format={format}")
     storage = StorageService()
     
     # Handle format parameter
     if format == "plain":
-        # Plain format uses a different file ID pattern
-        output_path = storage.get_processed_file_path(file_id + "_plain", "styled")
-        if not output_path.exists():
-            # Fallback: try the plain suffix path
-            output_path = storage.get_processed_file_path(file_id, "plain")
+        # Plain format: file_id should NOT have "_plain" suffix
+        # Remove "_plain" if present (for backward compatibility)
+        clean_file_id = file_id.replace("_plain", "")
+        output_path = storage.get_processed_file_path(clean_file_id, format_type="plain")
         filename_suffix = "plain"
     else:
-        output_path = storage.get_processed_file_path(file_id, "styled")
+        # Styled format
+        output_path = storage.get_processed_file_path(file_id, format_type="styled")
         filename_suffix = "styled"
     
-    if not output_path.exists():
-        raise HTTPException(status_code=404, detail="Processed file not found")
+    logger.info(f"Download file path: {output_path}, exists: {output_path.exists() if output_path else False}")
+    
+    if not output_path or not output_path.exists():
+        # List available files for debugging
+        output_dir = storage.get_processed_file_path(file_id, "styled").parent
+        available_files = list(output_dir.glob("*.xlsx")) if output_dir.exists() else []
+        logger.warning(f"File not found. Available files in {output_dir}: {[f.name for f in available_files[:10]]}")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Processed file not found. file_id={file_id}, format={format}, path={output_path}"
+        )
+    
+    logger.info(f"Serving file: {output_path}, size: {output_path.stat().st_size} bytes")
     
     return FileResponse(
         path=output_path,

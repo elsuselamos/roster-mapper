@@ -16,11 +16,31 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
-from app.api.v1 import upload, admin, batch, dashboard
+from app.api.v1 import upload, admin, batch, dashboard, files, no_db_files
+import asyncio
 
 # Setup logging
 setup_logging()
 logger = get_logger(__name__)
+
+
+async def periodic_cleanup():
+    """
+    Background task to periodically clean up expired files.
+    Runs every 10 minutes.
+    """
+    from app.api.v1.files import cleanup_expired_files
+    
+    CLEANUP_INTERVAL_SECONDS = 10 * 60  # 10 minutes
+    
+    while True:
+        try:
+            await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
+            await cleanup_expired_files()
+        except Exception as e:
+            logger.error(f"Cleanup task error: {e}", exc_info=True)
+            # Continue running even if cleanup fails
+            await asyncio.sleep(60)  # Wait 1 minute before retry
 
 
 @asynccontextmanager
@@ -47,9 +67,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Ensure directories exist
     settings.ensure_directories()
     
+    # Start cleanup task
+    cleanup_task = asyncio.create_task(periodic_cleanup())
+    logger.info("Started periodic cleanup task")
+    
+    # Start no-DB cleanup task if using no-DB endpoints
+    try:
+        from app.api.v1 import no_db_files
+        no_db_files.start_cleanup_task()
+        logger.info("Started no-DB cleanup task")
+    except Exception as e:
+        logger.warning(f"Failed to start no-DB cleanup task: {e}")
+    
     yield
     
     # Shutdown
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+    
+    # Close Cloud SQL connector if used
+    try:
+        from app.db.connector import close_connector
+        close_connector()
+    except Exception as e:
+        logger.warning(f"Error closing database connector: {e}")
+    
     logger.info("Shutting down Roster Mapper")
 
 
@@ -99,7 +144,7 @@ async def health_check() -> dict:
     """
     Health check endpoint.
     Returns service status for load balancers and monitoring.
-    Includes storage write permission check for Cloud Run.
+    Includes storage write permission check and database connectivity.
     """
     import os
     from pathlib import Path
@@ -114,8 +159,24 @@ async def health_check() -> dict:
     except Exception:
         storage_ok = False
     
+    # Check database connectivity
+    db_ok = False
+    db_error = None
+    try:
+        from app.db.connector import get_engine
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute("SELECT 1")
+        db_ok = True
+    except Exception as e:
+        db_error = str(e)
+        logger.warning(f"Database health check failed: {e}")
+    
+    # Overall status
+    overall_ok = storage_ok and db_ok
+    
     return {
-        "status": "ok" if storage_ok else "degraded",
+        "status": "ok" if overall_ok else "degraded",
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "environment": settings.APP_ENV,
@@ -124,6 +185,10 @@ async def health_check() -> dict:
             "writable": storage_ok,
             "storage_dir": str(settings.STORAGE_DIR),
             "output_dir": str(settings.OUTPUT_DIR)
+        },
+        "database": {
+            "connected": db_ok,
+            "error": db_error if not db_ok else None
         },
         "cloud_run": settings.is_cloud_run
     }
@@ -172,6 +237,17 @@ app.include_router(
     dashboard.router,
     prefix="/api/v1/dashboard",
     tags=["Dashboard"]
+)
+
+app.include_router(
+    files.router,
+    prefix="/api/v1/files",
+    tags=["Files"]
+)
+
+app.include_router(
+    no_db_files.router,
+    tags=["No-DB Files"]
 )
 
 # UI router already included above (before static files)
