@@ -35,7 +35,7 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 | `B19` | `{"B1": "NP", "B19": "TR"}` | `TR` | ✅ Longest-key-first (B19 > B1) |
 | `b1` | `{"B1": "NP"}` | `NP` | ✅ Case-insensitive |
 | `OT` | `{"OT": ""}` | *(rỗng)* | ✅ Map sang empty string |
-| `XYZ` | *(không có trong mapping)* | *(rỗng)* | ⚠️ Unmapped → empty |
+| `XYZ` | *(không có trong mapping)* | `XYZ` | ⚠️ Unmapped |
 | `B1/B2` | `{"B1": "NP", "B2": "SB"}` | `NP/SB` | ✅ Multi-code với separator `/` |
 | `B1,B2` | `{"B1": "NP", "B2": "SB"}` | `NP,SB` | ✅ Multi-code với separator `,` |
 | `B1 B2` | `{"B1": "NP", "B2": "SB"}` | `NP SB` | ✅ Multi-code với separator ` ` |
