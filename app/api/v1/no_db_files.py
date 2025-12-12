@@ -183,14 +183,19 @@ def delete_meta_and_files(file_id: str) -> None:
         file_id: Unique file identifier
     """
     meta = load_meta(file_id)
+    deleted_files = []
+    deleted_meta = False
+    
     if not meta:
         # Try to delete metadata file anyway
         p = _meta_path(file_id)
         if p.exists():
             try:
                 p.unlink()
-            except Exception:
-                pass
+                deleted_meta = True
+                logger.info(f"Deleted orphaned metadata: {file_id}")
+            except Exception as e:
+                logger.warning(f"Failed to delete orphaned metadata {file_id}: {e}")
         return
     
     # Delete files
@@ -205,10 +210,12 @@ def delete_meta_and_files(file_id: str) -> None:
             if path.exists():
                 if path.is_file():
                     path.unlink()
-                    logger.debug(f"Deleted file: {path}")
+                    deleted_files.append(path_str)
+                    logger.info(f"Deleted file: {path_str}")
                 elif path.is_dir():
                     shutil.rmtree(path)
-                    logger.debug(f"Deleted directory: {path}")
+                    deleted_files.append(path_str)
+                    logger.info(f"Deleted directory: {path_str}")
         except Exception as e:
             logger.warning(f"Failed to delete {path_str}: {e}")
     
@@ -217,12 +224,26 @@ def delete_meta_and_files(file_id: str) -> None:
     if p.exists():
         try:
             p.unlink()
-            logger.debug(f"Deleted metadata: {p}")
+            deleted_meta = True
+            logger.info(f"Deleted metadata: {file_id}")
         except Exception as e:
-            logger.warning(f"Failed to delete metadata {p}: {e}")
+            logger.warning(f"Failed to delete metadata {file_id}: {e}")
     
     # Remove from cache
     _meta_cache.pop(file_id, None)
+    
+    # Log summary
+    if deleted_files or deleted_meta:
+        logger.info(
+            "file_deleted_after_download",
+            extra={
+                "file_id": file_id,
+                "upload_id": meta.get("upload_id"),
+                "deleted_files": deleted_files,
+                "deleted_metadata": deleted_meta,
+                "total_files_deleted": len(deleted_files)
+            }
+        )
 
 
 def save_session_results(session_id: str, results: list) -> None:
@@ -639,7 +660,9 @@ def download_file(
         "file_download_started",
         extra={
             "file_id": file_id,
-            "upload_id": upload_id
+            "upload_id": upload_id,
+            "output_path": output_path,
+            "note": "Files will be deleted after download completes via background task"
         }
     )
     
