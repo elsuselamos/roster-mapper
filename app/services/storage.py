@@ -87,7 +87,13 @@ class StorageService:
         # Preserve original extension
         ext = Path(file.filename or "").suffix or ".xlsx"
         filename = f"{file_id}{ext}"
-        save_path = self.storage_dir / "uploads" / filename
+        
+        # Use storage_dir directly (already set to /tmp/uploads on Cloud Run)
+        # Only append "uploads" if storage_dir doesn't already end with "uploads"
+        if str(self.storage_dir).endswith("uploads"):
+            save_path = self.storage_dir / filename
+        else:
+            save_path = self.storage_dir / "uploads" / filename
         
         # Ensure upload directory exists
         save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -116,7 +122,11 @@ class StorageService:
         Returns:
             Path to the uploaded file.
         """
-        upload_dir = self.storage_dir / "uploads"
+        # Use storage_dir directly if it already ends with "uploads"
+        if str(self.storage_dir).endswith("uploads"):
+            upload_dir = self.storage_dir
+        else:
+            upload_dir = self.storage_dir / "uploads"
         
         # Try common extensions
         for ext in [".xlsx", ".xls"]:
