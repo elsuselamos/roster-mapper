@@ -24,23 +24,8 @@ setup_logging()
 logger = get_logger(__name__)
 
 
-async def periodic_cleanup():
-    """
-    Background task to periodically clean up expired files.
-    Runs every 10 minutes.
-    """
-    from app.api.v1.files import cleanup_expired_files
-    
-    CLEANUP_INTERVAL_SECONDS = 10 * 60  # 10 minutes
-    
-    while True:
-        try:
-            await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
-            await cleanup_expired_files()
-        except Exception as e:
-            logger.error(f"Cleanup task error: {e}", exc_info=True)
-            # Continue running even if cleanup fails
-            await asyncio.sleep(60)  # Wait 1 minute before retry
+# Removed periodic_cleanup() - using No-DB cleanup task from no_db_files.py instead
+# The old database-backed cleanup is no longer needed in v1.2.0 (No-DB architecture)
 
 
 @asynccontextmanager
@@ -67,11 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Ensure directories exist
     settings.ensure_directories()
     
-    # Start cleanup task
-    cleanup_task = asyncio.create_task(periodic_cleanup())
-    logger.info("Started periodic cleanup task")
-    
-    # Start no-DB cleanup task if using no-DB endpoints
+    # Start no-DB cleanup task (v1.2.0 - No-DB architecture)
     try:
         from app.api.v1 import no_db_files
         no_db_files.start_cleanup_task()
@@ -82,11 +63,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     
     # Shutdown
-    cleanup_task.cancel()
-    try:
-        await cleanup_task
-    except asyncio.CancelledError:
-        pass
+    # No-DB cleanup task is handled by no_db_files module
+    # No need to cancel here as it's managed internally
     
     # Close Cloud SQL connector if used
     try:
