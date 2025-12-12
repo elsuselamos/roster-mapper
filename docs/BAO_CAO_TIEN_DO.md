@@ -8,9 +8,9 @@
 |-----------|----------|
 | **Dự án** | Roster Mapper - Công cụ chuyển đổi mã roster |
 | **Bộ phận** | Quản lý Bảo dưỡng (Maintenance Ops) |
-| **Phiên bản** | v1.2.0 (Ephemeral File Lifecycle - No-DB) |
+| **Phiên bản** | v1.2.0 (Ephemeral File Lifecycle - No-DB + Empty Mapping Support) |
 | **Ngày báo cáo** | 13/12/2025 |
-| **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** + **No-DB Production Ready** |
+| **Trạng thái** | ✅ **PHASE 2 - HOÀN THÀNH** + **No-DB Production Ready** + **Cloud Run Ready** |
 | **Website** | vietjetair.com |
 
 ---
@@ -24,7 +24,10 @@ Dự án **Roster Mapper** nhằm tự động chuyển đổi mã roster từ c
 **Tính năng mới nhất (v1.2.0):**
 - ✅ **Ephemeral File Lifecycle**: Auto-deletion, TTL cleanup, Files API
 - ✅ **No-DB Architecture**: Metadata lưu trong JSON files, không cần database
+- ✅ **Empty Mapping Support**: Hỗ trợ map code sang rỗng `{"BD1": ""}` để xóa code
+- ✅ **Unmapped Preserve**: Code không có mapping sẽ giữ nguyên giá trị gốc (v1.0.1 behavior)
 - ✅ **Complete Deployment Guide**: Hướng dẫn đầy đủ trong `README.md`
+- ✅ **Cloud Run Services Enabled**: Đã enable các APIs cần thiết cho deployment
 
 Sẵn sàng đưa vào thử nghiệm nội bộ và production deployment.
 
@@ -76,13 +79,13 @@ Sẵn sàng đưa vào thử nghiệm nội bộ và production deployment.
 | `B1` | `{"B1": "NP"}` | `NP` | ✅ Exact match |
 | `B19` | `{"B1": "NP", "B19": "TR"}` | `TR` | ✅ Longest-key-first |
 | `b1` | `{"B1": "NP"}` | `NP` | ✅ Case-insensitive |
-| `OT` | `{"OT": ""}` | *(rỗng)* | ✅ Map sang empty |
-| `XYZ` | *(không có)* | *(rỗng)* | ⚠️ Unmapped → empty |
+| `OT` | `{"OT": ""}` | *(rỗng)* | ✅ Map sang empty (xóa code) |
+| `XYZ` | *(không có)* | `XYZ` | ✅ Unmapped → preserve original |
 | `B1/B2` | `{"B1": "NP", "B2": "SB"}` | `NP/SB` | ✅ Multi-code |
-| `B1/XYZ` | `{"B1": "NP"}` | `NP/` | ⚠️ XYZ unmapped |
-| `ABC/DEF` | *(không có)* | `/` | ⚠️ Cả 2 unmapped |
+| `B1/XYZ` | `{"B1": "NP"}` | `NP/XYZ` | ✅ B1 mapped, XYZ preserved |
+| `ABC/DEF` | *(không có)* | `ABC/DEF` | ✅ Cả 2 preserved |
 
-> ⚠️ **LƯU Ý QUAN TRỌNG**: Cần định nghĩa đầy đủ **TẤT CẢ** code trong mapping. Code không có sẽ bị xóa (thành rỗng)!
+> ✅ **LƯU Ý**: Code không có trong mapping sẽ **giữ nguyên** giá trị gốc. Chỉ khi mapping rõ ràng sang empty `{"BD1": ""}` thì code mới bị xóa.
 
 ### 3. Tùy chọn Download (MỚI)
 
@@ -229,17 +232,21 @@ docker run -p 8000:8000 roster-mapper:local
 
 **Pre-deployment:**
 - [x] Code hoàn chỉnh và tested (79/79 tests pass)
-- [x] Cloud SQL setup guide (`docs/DB_MIGRATION.md`)
+- [x] Empty mapping support implemented (`{"BD1": ""}`)
+- [x] Unmapped preserve behavior (v1.0.1) - giữ nguyên giá trị gốc
+- [x] Cleanup task fixed (removed database dependency)
+- [x] Cloud Run APIs enabled (run, cloudbuild, artifactregistry)
 - [x] No-DB deployment guide (`docs/NO_DB_DEPLOYMENT.md`)
 - [x] Complete deployment guide (`README.md`)
 - [x] CI/CD pipeline configured
 - [x] Health checks implemented
-- [x] Documentation đầy đủ
+- [x] Documentation đầy đủ và cập nhật
 
 **Ready for:**
-- [x] Production deployment với Cloud SQL
+- [x] Production deployment No-DB (Cloud Run)
 - [x] Pilot deployment không cần database
 - [x] Local/On-premise deployment
+- [ ] Production deployment với Cloud SQL (Phase 3 - future)
 
 ---
 
@@ -247,7 +254,9 @@ docker run -p 8000:8000 roster-mapper:local
 
 | STT | Công việc | Ưu tiên | Ghi chú |
 |-----|-----------|---------|---------|
-| 1 | **Deploy lên Cloud Run Production** | ⭐⭐⭐ Cao | Follow `README.md` - Section "🚀 Production Deployment" |
+| 1 | **Deploy lên Cloud Run Production (No-DB)** | ⭐⭐⭐ Cao | Follow `README.md` - Section "🚀 Production Deployment" - Option 1: No-DB |
+| 1.1 | **Verify Empty Mapping** | ⭐⭐ Trung bình | Test với mapping `{"BD1": ""}` để xác nhận code bị xóa |
+| 1.2 | **Verify Unmapped Preserve** | ⭐⭐ Trung bình | Test với code không có mapping để xác nhận giữ nguyên |
 | 2 | Thu thập file mapping thực tế từ SGN/DAD/CXR… | ⭐⭐ Trung bình | Cần dữ liệu từ station |
 | 3 | Test với file roster thật của từng station | ⭐⭐ Trung bình | Quan trọng |
 | 4 | Monitor production performance | ⭐⭐ Trung bình | Sau khi deploy |
@@ -350,11 +359,17 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 - 🚀 **No-DB Architecture**: Không cần database, đơn giản và dễ deploy
 - 📖 **Documentation**: `docs/NO_DB_DEPLOYMENT.md`, `docs/FILE_LIFECYCLE.md`
 
+### 8. Empty Mapping & Unmapped Behavior (v1.2.0)
+- ✅ **Empty Mapping Support**: Hỗ trợ map code sang rỗng `{"BD1": ""}` để xóa code
+- ✅ **Unmapped Preserve**: Code không có mapping sẽ **giữ nguyên** giá trị gốc (v1.0.1 behavior)
+- ✅ **Fixed Cleanup Task**: Removed database dependency, chỉ dùng No-DB cleanup
+- ✅ **Cloud Run Ready**: Đã enable APIs, fix errors, sẵn sàng deploy
+
 ---
 
 ## XII. CHANGELOG
 
-### VERSION 1.2.0 (13/12/2025) - Ephemeral File Lifecycle (No-DB)
+### VERSION 1.2.0 (13/12/2025) - Ephemeral File Lifecycle (No-DB) + Empty Mapping
 
 | Feature | Mô tả |
 |---------|-------|
@@ -363,8 +378,11 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 | **TTL Cleanup** | Periodic job dọn dẹp files quá hạn (1 giờ) |
 | **JSON Metadata** | Metadata lưu trong JSON files (`/tmp/meta/`), không cần database |
 | **No-DB Architecture** | Đơn giản, dễ deploy, không cần setup database |
+| **Empty Mapping Support** | Hỗ trợ map code sang rỗng `{"BD1": ""}` để xóa code |
+| **Unmapped Preserve** | Code không có mapping giữ nguyên giá trị gốc (v1.0.1 behavior) |
 | **Security** | Filename sanitization, size limits, secure headers |
 | **Documentation** | `NO_DB_DEPLOYMENT.md`, `FILE_LIFECYCLE.md` - Complete guides |
+| **Cloud Run Ready** | Đã enable APIs, fix cleanup task, sẵn sàng deploy |
 
 ### VERSION 1.1.0 (08/12/2025) - Cloud Run Deployment
 
@@ -398,5 +416,6 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 
 **© 2025 Vietjet AMO - IT Department**
 
-*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 13/12/2025 (v1.2.0 - Ephemeral File Lifecycle - No-DB)*  
-*Status: ✅ Production Ready - Sẵn sàng deploy lên Cloud Run (No-DB)*
+*Báo cáo được tạo ngày 05/12/2025 | Cập nhật: 13/12/2025 (v1.2.0 - Ephemeral File Lifecycle - No-DB + Empty Mapping)*  
+*Status: ✅ Production Ready - Sẵn sàng deploy lên Cloud Run (No-DB)*  
+*Highlights: Empty mapping support, Unmapped preserve (v1.0.1), Cloud Run APIs enabled, Cleanup task fixed*

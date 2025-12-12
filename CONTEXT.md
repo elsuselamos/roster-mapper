@@ -27,7 +27,7 @@
 | **Phase 2.5** | ✅ 100% | No-DB File Management (v1.2.0) |
 | **Phase 3** | ⏸️ 0% | Authentication + Database Integration (future) |
 
-**Current Version**: `v1.2.0`
+**Current Version**: `v1.2.0` (No-DB + Empty Mapping Support)
 
 ---
 
@@ -81,8 +81,8 @@ roster-mapper/
 - **Case-insensitive**: Không phân biệt hoa/thường
 - **Multi-code cells**: Hỗ trợ cell có nhiều code (phân cách bởi `/`, `,`, `;`, space)
 - **Regex patterns**: Hỗ trợ wildcard và regex trong mapping
-- **Empty string mapping**: Hỗ trợ map code sang giá trị rỗng `{"OT": ""}`
-- **Unmapped = Empty**: Code không có trong mapping sẽ thành rỗng (không giữ nguyên)
+- **Empty string mapping**: Hỗ trợ map code sang giá trị rỗng `{"BD1": ""}` - code sẽ bị xóa
+- **Unmapped = Preserve**: Code không có trong mapping sẽ **giữ nguyên** giá trị gốc (v1.0.1 behavior)
 
 ```python
 mapper = Mapper(station="HAN")
@@ -96,7 +96,7 @@ result = mapper.map_cell("B1/XYZ")  # -> "NP/" (XYZ không có mapping → rỗn
 |-------|---------|--------|------|
 | `B1` | `{"B1": "NP"}` | `NP` | Exact match |
 | `OT` | `{"OT": ""}` | *(empty)* | Map to empty |
-| `XYZ` | *(none)* | *(empty)* | Unmapped → empty |
+| `XYZ` | *(none)* | `XYZ` | Unmapped → preserve original |
 | `B1/B2` | `{"B1": "NP", "B2": "SB"}` | `NP/SB` | Multi-code |
 
 ### 2. Excel Processing với Style Preservation
@@ -250,8 +250,8 @@ gcloud run deploy roster-mapper \
 
 1. **Python 3.11+** required (tested with 3.12, 3.13)
 2. **Mapping logic**: Code → Code (NOT code → description)
-3. **Unmapped codes**: Chuyển thành **rỗng** (không giữ nguyên)
-4. **Empty mapping**: Hỗ trợ `{"OT": ""}` để xóa code
+3. **Unmapped codes**: **Giữ nguyên** giá trị gốc (v1.0.1 behavior)
+4. **Empty mapping**: Hỗ trợ `{"BD1": ""}` để xóa code (mapping thành empty string)
 5. **Multi-sheet**: Output file giữ nguyên tên sheets gốc
 6. **Style preservation**: Chỉ thay đổi value, giữ nguyên tất cả formatting
 7. **Session data**: Stored in `uploads/temp/session_*.json`
@@ -309,7 +309,7 @@ gcloud run deploy roster-mapper \
 | v1.0.1 | 08/12/2025 | Import Mapping Modal, Gunicorn timeout, Empty mapping, Unmapped → Empty |
 | v1.0.2 | 08/12/2025 | Documentation update, Behavior Table, Separators Table |
 | v1.1.0 | 08/12/2025 | **Cloud Run Deployment** - Ephemeral storage, LibreOffice, CI/CD pipeline |
-| v1.2.0 | 13/12/2025 | **Ephemeral File Lifecycle (No-DB)** - No-DB File Management API, JSON metadata, auto-deletion |
+| v1.2.0 | 13/12/2025 | **Ephemeral File Lifecycle (No-DB)** - No-DB File Management API, JSON metadata, auto-deletion, Empty mapping support |
 
 ---
 
@@ -382,4 +382,5 @@ Dự án được xây dựng qua các phase:
 ---
 
 *Last updated: December 13, 2025*
-*Version: 1.2.0 (No-DB - Ephemeral File Lifecycle)*
+*Version: 1.2.0 (No-DB - Ephemeral File Lifecycle + Empty Mapping Support)*
+*Highlights: Empty mapping `{"BD1": ""}`, Unmapped preserve (v1.0.1), Cloud Run ready*

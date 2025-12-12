@@ -17,8 +17,8 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 - ✅ **2 tùy chọn download**: Giữ format gốc hoặc Text only
 - ✅ **Import mapping**: Hỗ trợ CSV/JSON/Excel với modal xác nhận
 - ✅ **Loading spinner**: UX chuyên nghiệp khi xử lý
-- ✅ **Mapping sang rỗng**: Hỗ trợ xóa code không cần thiết `{"OT": ""}`
-- ✅ **Unmapped → Empty**: Code không có trong mapping sẽ bị xóa
+- ✅ **Mapping sang rỗng**: Hỗ trợ xóa code không cần thiết `{"BD1": ""}`
+- ✅ **Unmapped Preserve**: Code không có trong mapping sẽ **giữ nguyên** giá trị gốc (v1.0.1)
 - ✅ Quản lý phiên bản mapping
 - ✅ Web UI thân thiện (Tailwind + HTMX)
 - ✅ API RESTful
@@ -39,8 +39,8 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 | `B1/B2` | `{"B1": "NP", "B2": "SB"}` | `NP/SB` | ✅ Multi-code với separator `/` |
 | `B1,B2` | `{"B1": "NP", "B2": "SB"}` | `NP,SB` | ✅ Multi-code với separator `,` |
 | `B1 B2` | `{"B1": "NP", "B2": "SB"}` | `NP SB` | ✅ Multi-code với separator ` ` |
-| `B1/XYZ` | `{"B1": "NP"}` | `NP/` | ⚠️ B1 mapped, XYZ unmapped → empty |
-| `ABC/DEF` | *(không có)* | `/` | ⚠️ Cả 2 unmapped → empty |
+| `B1/XYZ` | `{"B1": "NP"}` | `NP/XYZ` | ✅ B1 mapped, XYZ preserved |
+| `ABC/DEF` | *(không có)* | `ABC/DEF` | ✅ Cả 2 preserved |
 | `^O'.*` | `{"^O'.*": "OT"}` | `OT` | ✅ Regex pattern match |
 | `B*` | `{"B*": "B-Series"}` | `B-Series` | ✅ Wildcard pattern |
 
@@ -82,7 +82,7 @@ OT,
 | B2 | SB |
 | OT | *(để trống)* |
 
-> ⚠️ **Lưu ý quan trọng**: Code không có trong mapping sẽ thành **giá trị rỗng**. Hãy đảm bảo định nghĩa đầy đủ tất cả các code cần giữ lại!
+> ✅ **Lưu ý**: Code không có trong mapping sẽ **giữ nguyên** giá trị gốc. Chỉ khi mapping rõ ràng sang empty `{"BD1": ""}` thì code mới bị xóa.
 
 ## 🚀 Cài đặt & Chạy
 
@@ -817,7 +817,8 @@ Internal use only - Vietjet Aviation Joint Stock Company
 
 ---
 
-**Version**: 1.2.0 (No-DB)  
+**Version**: 1.2.0 (No-DB + Empty Mapping Support)  
 **Last Updated**: December 13, 2025  
-**Architecture**: No-DB (Metadata in JSON files, Ephemeral storage)
+**Architecture**: No-DB (Metadata in JSON files, Ephemeral storage)  
+**Mapping Behavior**: Unmapped codes preserve original value (v1.0.1), Empty mapping supported
 
