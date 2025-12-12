@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
-from app.api.v1 import upload, admin, batch, dashboard, files, no_db_files
+from app.api.v1 import upload, admin, batch, dashboard, no_db_files
 import asyncio
 
 # Setup logging
@@ -137,21 +137,9 @@ async def health_check() -> dict:
     except Exception:
         storage_ok = False
     
-    # Check database connectivity
-    db_ok = False
-    db_error = None
-    try:
-        from app.db.connector import get_engine
-        engine = get_engine()
-        with engine.connect() as conn:
-            conn.execute("SELECT 1")
-        db_ok = True
-    except Exception as e:
-        db_error = str(e)
-        logger.warning(f"Database health check failed: {e}")
-    
-    # Overall status
-    overall_ok = storage_ok and db_ok
+    # No-DB architecture: no database check needed
+    # Overall status based on storage only
+    overall_ok = storage_ok
     
     return {
         "status": "ok" if overall_ok else "degraded",
@@ -164,10 +152,7 @@ async def health_check() -> dict:
             "storage_dir": str(settings.STORAGE_DIR),
             "output_dir": str(settings.OUTPUT_DIR)
         },
-        "database": {
-            "connected": db_ok,
-            "error": db_error if not db_ok else None
-        },
+        "architecture": "no-db",
         "cloud_run": settings.is_cloud_run
     }
 
@@ -215,12 +200,6 @@ app.include_router(
     dashboard.router,
     prefix="/api/v1/dashboard",
     tags=["Dashboard"]
-)
-
-app.include_router(
-    files.router,
-    prefix="/api/v1/files",
-    tags=["Files"]
 )
 
 app.include_router(

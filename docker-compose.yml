@@ -1,54 +1,55 @@
 # ===========================================
-# Roster Mapper - Docker Compose
+# Roster Mapper - Docker Compose (No-DB)
 # ===========================================
 # Author: datnguyentien@vietjetair.com
+# 
+# No-DB Architecture (v1.2.0+):
+# - No PostgreSQL database required
+# - Ephemeral file storage in /tmp (or local volumes)
+# - Metadata stored in JSON files
+#
+# Usage:
+#   docker-compose up -d --build
+#   docker-compose logs -f web
+#   docker-compose down
 
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  db:
-    image: postgres:15-alpine
-    container_name: roster-mapper-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: roster_mapper
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    # ports:
-    #   - "5432:5432"  # Không cần expose ra ngoài, web kết nối qua internal network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d roster_mapper"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - roster-network
-
-  # Web Application
+  # Web Application (No-DB)
   web:
     build:
       context: .
       dockerfile: docker/Dockerfile
     container_name: roster-mapper-web
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
+      # Application
       - APP_NAME=roster-mapper
       - APP_ENV=production
       - DEBUG=false
       - LOG_LEVEL=INFO
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/roster_mapper
-      - MAPPING_DIR=/app/mappings
+      
+      # No-DB Storage Configuration
+      - STORAGE_TYPE=local
       - STORAGE_DIR=/app/uploads
+      - OUTPUT_DIR=/app/uploads/processed
+      - TEMP_DIR=/app/temp
+      - META_DIR=/app/meta
+      
+      # Mapping Configuration
+      - MAPPING_DIR=/app/mappings
       - AUTO_DETECT_STATION=true
+      
+      # File Lifecycle
+      - MAX_UPLOAD_SIZE=52428800  # 50MB
+      - FILE_TTL_SECONDS=3600     # 1 hour
     volumes:
+      # Mapping files (persistent)
       - ./mappings:/app/mappings
+      # Local storage (optional, for testing)
       - ./uploads:/app/uploads
+      - ./meta:/app/meta
     ports:
       - "8000:8000"
     healthcheck:
@@ -59,25 +60,7 @@ services:
     networks:
       - roster-network
 
-  # Database Admin (optional, for development)
-  adminer:
-    image: adminer:latest
-    container_name: roster-mapper-adminer
-    restart: unless-stopped
-    depends_on:
-      - db
-    ports:
-      - "8080:8080"
-    networks:
-      - roster-network
-    profiles:
-      - dev
-
 networks:
   roster-network:
     driver: bridge
-
-volumes:
-  postgres_data:
-    driver: local
 
