@@ -480,22 +480,7 @@ gcloud projects add-iam-policy-binding $PROJECT `
 # 3.1. Ensure code is up-to-date
 git pull origin main
 
-# 3.2. Build Docker image với Cloud Build
-PROJECT=$(gcloud config get-value project)
-SHORT_SHA=$(git rev-parse --short HEAD)
-
-# Option A: Build với cloudbuild.yaml (khuyến nghị)
-gcloud builds submit \
-    --config cloudbuild.yaml \
-    --substitutions "_SHORT_SHA=$SHORT_SHA"
-
-# Option B: Build trực tiếp (nếu không dùng cloudbuild.yaml)
-# gcloud builds submit \
-#     --tag "gcr.io/$PROJECT/roster-mapper:latest" \
-#     -f docker/Dockerfile.cloudrun \
-#     .
-
-# 3.3. Deploy to Cloud Run (No-DB, Single Instance)
+# 3.2. Deploy to Cloud Run (No-DB, Single Instance)
 SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
 gcloud run deploy roster-mapper \
@@ -522,13 +507,13 @@ gcloud run deploy roster-mapper \
     --max-instances 1 \
     --concurrency 80
 
-# 3.4. Set IAM policy (cho phép public access)
+# 3.3. Set IAM policy (cho phép public access)
 gcloud run services add-iam-policy-binding roster-mapper \
     --region asia-southeast1 \
     --member allUsers \
     --role roles/run.invoker
 
-# 3.5. Get service URL
+# 3.4. Get service URL
 SERVICE_URL=$(gcloud run services describe roster-mapper \
     --region asia-southeast1 \
     --format='value(status.url)')
@@ -540,22 +525,8 @@ echo "✅ Service deployed to: $SERVICE_URL"
 # 3.1. Ensure code is up-to-date
 git pull origin main
 
-# 3.2. Build Docker image với Cloud Build
-$PROJECT = gcloud config get-value project
-$SHORT_SHA = git rev-parse --short HEAD
 
-# Option A: Build với cloudbuild.yaml (khuyến nghị)
-gcloud builds submit `
-    --config cloudbuild.yaml `
-    --substitutions "_SHORT_SHA=$SHORT_SHA"
-
-# Option B: Build trực tiếp (nếu không dùng cloudbuild.yaml)
-# gcloud builds submit `
-#     --tag "gcr.io/$PROJECT/roster-mapper:latest" `
-#     -f docker/Dockerfile.cloudrun `
-#     .
-
-# 3.3. Deploy to Cloud Run (No-DB, Single Instance)
+# 3.2. Deploy to Cloud Run (No-DB, Single Instance)
 $SA_RUNNER_EMAIL = "roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
 gcloud run deploy roster-mapper `
@@ -582,13 +553,13 @@ gcloud run deploy roster-mapper `
     --max-instances 1 `
     --concurrency 80
 
-# 3.4. Set IAM policy (cho phép public access)
+# 3.3. Set IAM policy (cho phép public access)
 gcloud run services add-iam-policy-binding roster-mapper `
     --region asia-southeast1 `
     --member allUsers `
     --role roles/run.invoker
 
-# 3.5. Get service URL
+# 3.4. Get service URL
 $SERVICE_URL = gcloud run services describe roster-mapper `
     --region asia-southeast1 `
     --format='value(status.url)'
@@ -652,74 +623,6 @@ gcloud run services describe roster-mapper \
     --region asia-southeast1 \
     --format='yaml(status)'
 ```
-
----
-
-### 🐛 Troubleshooting
-
-#### Lỗi: requirements.txt not found
-
-**Nguyên nhân:** File chưa được commit/push hoặc build context sai
-
-**Giải pháp:**
-```bash
-# 1. Kiểm tra file có trong git
-git ls-files requirements.txt
-
-# 2. Nếu không có, thêm và push
-git add requirements.txt
-git commit -m "Add requirements.txt"
-git push origin main
-
-# 3. Verify trên GitHub web
-# 4. Deploy lại với build context đúng (root của repo)
-```
-
-#### Lỗi: Substitution key format error
-
-**Nếu gặp:** `substitution key SHORT_SHA does not respect format ^_[A-Z0-9_]+$`
-
-**Giải pháp:**
-```bash
-# Pull code mới nhất
-git pull origin main
-
-# Verify cloudbuild.yaml
-cat cloudbuild.yaml | grep "_SHORT_SHA"
-# Phải thấy: _SHORT_SHA (có dấu _ ở đầu)
-
-# Dùng đúng format
-gcloud builds submit \
-    --config cloudbuild.yaml \
-    --substitutions _SHORT_SHA=$(git rev-parse --short HEAD)
-```
-
-#### Lỗi: Forbidden (403)
-
-**Nếu gặp:** `Error: Forbidden - Your client does not have permission`
-
-**Giải pháp:**
-```bash
-# Cho phép public access
-gcloud run services add-iam-policy-binding roster-mapper \
-    --region asia-southeast1 \
-    --member allUsers \
-    --role roles/run.invoker
-
-# Verify
-gcloud run services get-iam-policy roster-mapper --region asia-southeast1
-```
-
-#### Bảng lỗi thường gặp
-
-| Lỗi | Nguyên nhân | Giải pháp |
-|-----|-------------|-----------|
-| `COPY failed: file not found: stat requirements.txt` | File chưa commit/push | `git add requirements.txt && git commit && git push` |
-| `substitution key SHORT_SHA does not respect format` | Format sai | Dùng `_SHORT_SHA` (có `_` ở đầu) |
-| `Error: Forbidden` | IAM policy chưa set | `gcloud run services add-iam-policy-binding ... --member allUsers --role roles/run.invoker` |
-| `Container failed to start` | Dockerfile lỗi | Check build logs, verify Dockerfile.cloudrun |
-| `Memory limit exceeded` | File quá lớn | Tăng memory: `--memory 2Gi` |
-| `Files not found after upload` | Ephemeral storage issue | Check `/tmp` permissions, verify env vars |
 
 ---
 
