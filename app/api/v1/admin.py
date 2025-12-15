@@ -195,19 +195,91 @@ async def import_mappings_file(
             
             # Use first two columns as from/to
             if len(df.columns) >= 2:
-                for idx, row in df.iterrows():
-                    from_code = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ""
-                    to_code = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else ""
-                    
-                    # Skip header row if it looks like headers
-                    if idx == 0 and from_code.lower() in ["from", "code", "from_code", "mã gốc", "from code", "to", "to code"]:
-                        continue
-                    
-                    # Skip empty rows
-                    if from_code and to_code and from_code != "nan" and to_code != "nan":
-                        mapping_dict[from_code] = to_code
+                # Check if first row looks like header
+                first_row_from = ""
+                first_row_to = ""
+                if len(df) > 0:
+                    first_val_0 = df.iloc[0, 0]
+                    first_val_1 = df.iloc[0, 1] if len(df.columns) > 1 else None
+                    first_row_from = str(first_val_0).strip().lower() if pd.notna(first_val_0) else ""
+                    first_row_to = str(first_val_1).strip().lower() if first_val_1 is not None and pd.notna(first_val_1) else ""
                 
-                logger.info(f"Parsed {len(mapping_dict)} mappings from Excel")
+                # Header keywords to detect header row
+                header_keywords = ["from", "code", "from_code", "mã gốc", "from code", "to", "to code", "description", "mô tả"]
+                skip_first_row = (first_row_from in header_keywords or first_row_to in header_keywords)
+                
+                start_idx = 1 if skip_first_row else 0
+                
+                skipped_rows = 0
+                empty_from_count = 0
+                empty_to_count = 0
+                
+                for idx in range(start_idx, len(df)):
+                    row = df.iloc[idx]
+                    
+                    # Get values from first two columns
+                    val_0 = row.iloc[0]
+                    val_1 = row.iloc[1] if len(row) > 1 else None
+                    
+                    # Convert to string, handling NaN and None
+                    if pd.isna(val_0) or val_0 is None:
+                        from_code = ""
+                        empty_from_count += 1
+                    else:
+                        # Convert to string, handling numeric values
+                        if isinstance(val_0, (int, float)):
+                            # For integers, remove decimal point if it's .0
+                            if isinstance(val_0, float) and val_0.is_integer():
+                                from_code = str(int(val_0)).strip()
+                            else:
+                                from_code = str(val_0).strip()
+                        else:
+                            from_code = str(val_0).strip()
+                    
+                    if val_1 is None or pd.isna(val_1):
+                        to_code = ""
+                        empty_to_count += 1
+                    else:
+                        # Convert to string, handling numeric values
+                        if isinstance(val_1, (int, float)):
+                            # For integers, remove decimal point if it's .0
+                            if isinstance(val_1, float) and val_1.is_integer():
+                                to_code = str(int(val_1)).strip()
+                            else:
+                                to_code = str(val_1).strip()
+                        else:
+                            to_code = str(val_1).strip()
+                    
+                    # Skip empty rows or rows with "nan" string
+                    # Allow empty to_code (for mapping to empty string)
+                    if from_code and from_code.lower() != "nan":
+                        # to_code can be empty (for mapping to empty string)
+                        if to_code.lower() != "nan":
+                            # Check for duplicate keys (warn but allow overwrite)
+                            if from_code in mapping_dict:
+                                logger.warning(
+                                    f"Duplicate from_code '{from_code}' at row {idx}",
+                                    previous_value=mapping_dict[from_code],
+                                    new_value=to_code
+                                )
+                            mapping_dict[from_code] = to_code
+                        else:
+                            skipped_rows += 1
+                            logger.debug(f"Skipped row {idx}: from_code='{from_code}', to_code='{to_code}' (nan)")
+                    else:
+                        skipped_rows += 1
+                        if not from_code:
+                            logger.debug(f"Skipped row {idx}: empty from_code")
+                
+                logger.info(
+                    f"Parsed {len(mapping_dict)} mappings from Excel",
+                    total_rows=len(df),
+                    start_idx=start_idx,
+                    skipped_first_row=skip_first_row,
+                    skipped_rows=skipped_rows,
+                    empty_from_count=empty_from_count,
+                    empty_to_count=empty_to_count
+                )
             else:
                 raise HTTPException(
                     status_code=400,
