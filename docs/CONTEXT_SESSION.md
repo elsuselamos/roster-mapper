@@ -192,23 +192,56 @@ gcloud run logs read roster-mapper --region asia-southeast1 --limit 50
 
 ### Image Path Invalid (SHORT_SHA empty)
 
-**Lỗi:** `expected a container image path in the form [hostname/]repo-path[:tag and/or @digest]`
+**Lỗi:** `expected a container image path in the form [hostname/]repo-path[:tag and/or @digest]`  
+**Hoặc:** `fatal: not a git repository (or any parent up to mount point /)`
 
-**Nguyên nhân:** Biến `$SHORT_SHA` hoặc `$IMAGE_TAG` chưa được set
+**Nguyên nhân:** Biến `$SHORT_SHA` hoặc `$IMAGE_TAG` chưa được set, hoặc không có git repository
 
-**Giải pháp:**
+**Giải pháp 1: Dùng tag "latest" (Khuyến nghị khi không có git)**
+
 ```bash
-# Set biến trước khi deploy
 PROJECT=$(gcloud config get-value project)
-SHORT_SHA=$(git rev-parse --short HEAD)
-IMAGE_TAG="$SHORT_SHA"  # Hoặc dùng "latest"
+IMAGE_TAG="latest"  # Dùng latest thay vì SHORT_SHA
 SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
-# Verify
-echo "SHORT_SHA: $SHORT_SHA"
-echo "IMAGE_TAG: $IMAGE_TAG"
+# Build (không cần SHORT_SHA)
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions "_SHORT_SHA=latest"
 
-# Deploy với image tag đã verify
+# Deploy với latest tag
+gcloud run deploy roster-mapper \
+    --image "gcr.io/$PROJECT/roster-mapper:latest" \
+    --region asia-southeast1 \
+    ...
+```
+
+**Giải pháp 2: Clone repo trước (Nếu có GitHub repo)**
+
+```bash
+# Clone repo
+git clone https://github.com/YOUR_USERNAME/roster-mapper.git
+cd roster-mapper
+
+# Sau đó dùng lệnh bình thường
+PROJECT=$(gcloud config get-value project)
+SHORT_SHA=$(git rev-parse --short HEAD)
+...
+```
+
+**Giải pháp 3: Dùng timestamp**
+
+```bash
+PROJECT=$(gcloud config get-value project)
+IMAGE_TAG=$(date +%Y%m%d_%H%M%S)  # Format: 20251213_143000
+SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
+# Build
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions "_SHORT_SHA=$IMAGE_TAG"
+
+# Deploy
 gcloud run deploy roster-mapper \
     --image "gcr.io/$PROJECT/roster-mapper:$IMAGE_TAG" \
     ...

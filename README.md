@@ -738,17 +738,38 @@ curl http://localhost:8000/health
 ```bash
 # Rebuild và redeploy
 PROJECT=$(gcloud config get-value project)
-SHORT_SHA=$(git rev-parse --short HEAD)
+IMAGE_TAG="latest"
+SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
 # Build
 gcloud builds submit \
     --config cloudbuild.yaml \
-    --substitutions "_SHORT_SHA=$SHORT_SHA"
+    --substitutions "_SHORT_SHA=latest"
 
 # Deploy
 gcloud run deploy roster-mapper \
-    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" \
-    --region asia-southeast1
+    --image "gcr.io/$PROJECT/roster-mapper:latest" \
+    --region asia-southeast1 \
+    --platform managed \
+    --allow-unauthenticated \
+    --service-account "$SA_RUNNER_EMAIL" \
+    --set-env-vars "STORAGE_TYPE=local" \
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" \
+    --set-env-vars "OUTPUT_DIR=/tmp/output" \
+    --set-env-vars "TEMP_DIR=/tmp/temp" \
+    --set-env-vars "META_DIR=/tmp/meta" \
+    --set-env-vars "APP_ENV=production" \
+    --set-env-vars "LOG_LEVEL=INFO" \
+    --set-env-vars "DEBUG=false" \
+    --set-env-vars "AUTO_DETECT_STATION=true" \
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" \
+    --set-env-vars "FILE_TTL_SECONDS=3600" \
+    --memory 1Gi \
+    --cpu 1 \
+    --timeout 300 \
+    --min-instances 1 \
+    --max-instances 1 \
+    --concurrency 80
 ```
 
 **PowerShell (Windows):**
