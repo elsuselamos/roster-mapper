@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     STORAGE_DIR: Path = Path(os.getenv("STORAGE_DIR", "./uploads"))
     OUTPUT_DIR: Path = Path(os.getenv("OUTPUT_DIR", "./uploads/processed"))
     TEMP_DIR: Path = Path(os.getenv("TEMP_DIR", "./temp"))
+    META_DIR: Path = Path(os.getenv("META_DIR", "./temp/meta"))
     
     # Cloud Run specific
     IS_CLOUD_RUN: bool = os.getenv("K_SERVICE", "") != ""  # K_SERVICE is set by Cloud Run
@@ -77,7 +78,7 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
-    @field_validator("MAPPING_DIR", "STORAGE_DIR", "OUTPUT_DIR", "TEMP_DIR", mode="before")
+    @field_validator("MAPPING_DIR", "STORAGE_DIR", "OUTPUT_DIR", "TEMP_DIR", "META_DIR", mode="before")
     @classmethod
     def ensure_path(cls, v: str | Path) -> Path:
         """Convert string paths to Path objects."""

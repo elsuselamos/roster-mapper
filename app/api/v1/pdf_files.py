@@ -53,9 +53,9 @@ def _log_routes():
 _log_routes()
 
 # Directories
-UPLOAD_DIR = Path(getattr(settings, "STORAGE_DIR", "./uploads"))
-OUTPUT_DIR = Path(getattr(settings, "OUTPUT_DIR", "./uploads/processed"))
-META_DIR = Path(getattr(settings, "META_DIR", "./temp/meta"))
+UPLOAD_DIR = settings.STORAGE_DIR
+OUTPUT_DIR = settings.OUTPUT_DIR
+META_DIR = settings.META_DIR
 
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
