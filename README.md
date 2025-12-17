@@ -457,6 +457,9 @@ gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
     --member="serviceAccount:$SA_RUNNER_EMAIL" \
     --role="roles/logging.logWriter"
 ```
+# xóa IAM user (roster-mapper-iam-user)
+SA_RUNNER_EMAIL="roster-mapper-iam-user@$PROJECT.iam.gserviceaccount.com"
+gcloud iam service-accounts delete $SA_RUNNER_EMAIL --quiet
 
 **PowerShell (Windows):**
 ```powershell
