@@ -63,6 +63,14 @@ async def upload_page(request: Request):
     })
 
 
+@router.get("/upload-pdf", response_class=HTMLResponse)
+async def upload_pdf_page(request: Request):
+    """PDF upload page - redirect to /upload with PDF tab active."""
+    # Redirect to main upload page with PDF tab
+    # The tab will be activated via JavaScript based on URL hash
+    return RedirectResponse(url="/upload#pdf", status_code=302)
+
+
 @router.post("/upload", response_class=HTMLResponse)
 async def handle_upload(
     request: Request,

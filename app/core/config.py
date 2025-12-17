@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "Vietjet Roster Mapper"
-    APP_VERSION: str = "1.1.0"
+    APP_VERSION: str = "1.3.0"
     APP_ENV: str = "development"
     DEBUG: bool = True
     LOG_LEVEL: str = "INFO"
@@ -69,6 +69,11 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "change-me-in-production"
     API_KEY: str = "your-api-key-here"
+    
+    # ComPDF API
+    # Note: Get these from ComPDF API console: https://api.compdf.com -> API Key section
+    COMPDF_PUBLIC_KEY: str = os.getenv("COMPDF_PUBLIC_KEY", "public_key_7eedffb6441e996592f3f612f6e22aea")
+    COMPDF_SECRET_KEY: str = os.getenv("COMPDF_SECRET_KEY", "")
     
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]

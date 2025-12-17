@@ -372,6 +372,20 @@ Phase 3: Authentication (chưa yêu cầu)   [░░░░░░░░░░] 0%
 
 ## XII. CHANGELOG
 
+### VERSION 1.3.0 (18/12/2025) - PDF Support + UI Improvements
+
+| Feature | Mô tả |
+|---------|-------|
+| **PDF Upload Support** | Hỗ trợ upload và convert PDF sang Excel sử dụng ComPDF API |
+| **PDF to Excel Conversion** | Tích hợp ComPDF API để convert PDF với chất lượng cao, giữ nguyên format |
+| **Tab-based UI** | Tách riêng tab Upload Excel và Upload PDF trong giao diện |
+| **Station Status Grid** | Hiển thị grid station status trong cả 2 tab (Excel và PDF) |
+| **Clear All Button** | Thêm nút Clear All trong tab PDF upload |
+| **Download Options** | Thêm 2 nút Download Now (Giữ Format và Text Only) trong results page |
+| **UI Consistency** | Đồng nhất giao diện giữa Excel và PDF upload tabs |
+| **ComPDF Integration** | Service layer để xử lý PDF conversion với async/sync support |
+| **Error Handling** | Cải thiện error handling cho PDF conversion và mapping |
+
 ### VERSION 1.2.0 (13/12/2025) - Ephemeral File Lifecycle (No-DB) + Empty Mapping
 
 ### VERSION 1.2.4 (13/12/2025) - Single-Instance Deployment + UI Routes Updated

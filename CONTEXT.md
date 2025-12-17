@@ -27,7 +27,7 @@
 | **Phase 2.5** | ✅ 100% | No-DB File Management (v1.2.0 → v1.2.4) |
 | **Phase 3** | ⏸️ 0% | Authentication + Database Integration (future) |
 
-**Current Version**: `v1.2.4` (No-DB + Empty Mapping Support + Single-Instance Deployment)
+**Current Version**: `v1.3.0` (PDF Support + UI Improvements)
 
 ---
 

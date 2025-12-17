@@ -13,6 +13,7 @@ import shutil
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Border, Side
 
 from app.core.logging import get_logger
 
@@ -547,19 +548,71 @@ class ExcelProcessor:
             
             logger.info(f"Processing sheet: {sheet_name}")
             
+            # Get sheet dimensions for logging
+            max_row = ws.max_row
+            max_col = ws.max_column
+            logger.info(
+                f"Sheet {sheet_name} dimensions",
+                max_row=max_row,
+                max_col=max_col,
+                total_cells_estimate=max_row * max_col
+            )
+            
+            # Count cells before mapping
+            cells_with_value_before = 0
+            for row in ws.iter_rows():
+                for cell in row:
+                    if cell.value is not None and str(cell.value).strip() != "":
+                        cells_with_value_before += 1
+            
+            logger.info(f"Found {cells_with_value_before} cells with values before mapping in sheet {sheet_name}")
+            
             # Iterate through all cells and map values
             for row in ws.iter_rows():
                 for cell in row:
+                    # Process all cells, including empty ones (to preserve formatting)
                     if cell.value is not None:
                         original_value = str(cell.value)
-                        mapped_value = mapper_func(cell.value)
-                        
-                        # Only update if value changed
-                        if mapped_value != original_value:
-                            cell.value = mapped_value
-                            sheet_mapped += 1
-                        else:
+                        try:
+                            mapped_value = mapper_func(cell.value)
+                            
+                            # Only update if value changed
+                            if mapped_value != original_value:
+                                cell.value = mapped_value
+                                sheet_mapped += 1
+                            else:
+                                sheet_unchanged += 1
+                        except Exception as e:
+                            logger.warning(
+                                f"Error mapping cell {cell.coordinate} with value '{cell.value}': {e}",
+                                exc_info=True
+                            )
+                            # Keep original value on error
                             sheet_unchanged += 1
+            
+            # Count cells after mapping
+            cells_with_value_after = 0
+            for row in ws.iter_rows():
+                for cell in row:
+                    if cell.value is not None and str(cell.value).strip() != "":
+                        cells_with_value_after += 1
+            
+            logger.info(
+                f"Sheet {sheet_name} mapping complete",
+                cells_before=cells_with_value_before,
+                cells_after=cells_with_value_after,
+                mapped=sheet_mapped,
+                unchanged=sheet_unchanged
+            )
+            
+            # Warn if cells were lost
+            if cells_with_value_after < cells_with_value_before:
+                logger.warning(
+                    f"Data loss detected in sheet {sheet_name}!",
+                    cells_before=cells_with_value_before,
+                    cells_after=cells_with_value_after,
+                    lost=cells_with_value_before - cells_with_value_after
+                )
             
             stats["sheet_stats"][sheet_name] = {
                 "mapped": sheet_mapped,
@@ -575,6 +628,9 @@ class ExcelProcessor:
                 mapped=sheet_mapped,
                 unchanged=sheet_unchanged
             )
+            
+            # Apply borders to all cells with data
+            self._apply_borders_to_sheet(ws)
         
         # Save the workbook
         wb.save(dest_path)
@@ -588,4 +644,33 @@ class ExcelProcessor:
         )
         
         return stats
+    
+    def _apply_borders_to_sheet(self, ws) -> None:
+        """
+        Apply thin borders to all cells in the used range of a worksheet.
+        
+        Args:
+            ws: openpyxl worksheet object
+        """
+        # Define thin border style
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Get the used range
+        if ws.max_row == 0 or ws.max_column == 0:
+            return
+        
+        # Apply borders to all cells in the used range
+        border_count = 0
+        for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+            for cell in row:
+                # Apply border to all cells in used range
+                cell.border = thin_border
+                border_count += 1
+        
+        logger.debug(f"Applied borders to {border_count} cells in sheet {ws.title}")
 

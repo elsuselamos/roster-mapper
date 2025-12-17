@@ -120,25 +120,47 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">📥 Tùy chọn Download</h3>
         <div class="grid md:grid-cols-2 gap-4">
-            <div class="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
-                <span class="text-2xl">🎨</span>
-                <div>
-                    <h4 class="font-medium text-green-800">Giữ Format</h4>
-                    <p class="text-sm text-green-600">
-                        Giữ nguyên toàn bộ định dạng gốc: màu sắc, font chữ, border, 
-                        merge cells, chiều rộng cột... Chỉ thay đổi nội dung text.
-                    </p>
+            <div class="flex flex-col">
+                <div class="flex items-start space-x-3 p-4 bg-green-50 rounded-lg flex-1">
+                    <span class="text-2xl">🎨</span>
+                    <div>
+                        <h4 class="font-medium text-green-800">Giữ Format</h4>
+                        <p class="text-sm text-green-600">
+                            Giữ nguyên toàn bộ định dạng gốc: màu sắc, font chữ, border, 
+                            merge cells, chiều rộng cột... Chỉ thay đổi nội dung text.
+                        </p>
+                    </div>
                 </div>
+                {% if results and results[0] and not results[0].error %}
+                <div class="mt-4 flex justify-center">
+                    <a href="{{ results[0].download_url_styled or results[0].download_url }}" 
+                       class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2">
+                        <span>⬇️</span>
+                        <span>Download Now</span>
+                    </a>
+                </div>
+                {% endif %}
             </div>
-            <div class="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
-                <span class="text-2xl">📄</span>
-                <div>
-                    <h4 class="font-medium text-blue-800">Text Only</h4>
-                    <p class="text-sm text-blue-600">
-                        Chỉ giữ nội dung text thuần, không có định dạng. 
-                        Phù hợp để import vào hệ thống khác hoặc xử lý tiếp.
-                    </p>
+            <div class="flex flex-col">
+                <div class="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg flex-1">
+                    <span class="text-2xl">📄</span>
+                    <div>
+                        <h4 class="font-medium text-blue-800">Text Only</h4>
+                        <p class="text-sm text-blue-600">
+                            Chỉ giữ nội dung text thuần, không có định dạng. 
+                            Phù hợp để import vào hệ thống khác hoặc xử lý tiếp.
+                        </p>
+                    </div>
                 </div>
+                {% if results and results[0] and not results[0].error %}
+                <div class="mt-4 flex justify-center">
+                    <a href="{{ results[0].download_url_plain or (results[0].download_url + '?format=plain') }}" 
+                       class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2">
+                        <span>⬇️</span>
+                        <span>Download Now</span>
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

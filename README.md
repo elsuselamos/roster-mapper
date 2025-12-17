@@ -9,6 +9,7 @@
 Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt động (roster codes) trong bảng phân công nhân sự sang mã chuẩn HR. Hệ thống hỗ trợ:
 
 - ✅ Upload file Excel (.xlsx, .xls)
+- ✅ **Upload file PDF** - Hỗ trợ convert PDF sang Excel và mapping (v1.3.0)
 - ✅ Mapping mã theo từng station (SGN, HAN, DAD, CXR, HPH, VCA, VII)
 - ✅ Xử lý multi-code cells (A/B, A,B, A B)
 - ✅ Longest-key-first matching (B19 được match trước B1)
@@ -20,7 +21,7 @@ Roster Mapper là công cụ hỗ trợ việc chuyển đổi các mã hoạt �
 - ✅ **Mapping sang rỗng**: Hỗ trợ xóa code không cần thiết `{"BD1": ""}`
 - ✅ **Unmapped Preserve**: Code không có trong mapping sẽ **giữ nguyên** giá trị gốc (v1.0.1)
 - ✅ Quản lý phiên bản mapping
-- ✅ Web UI thân thiện (Tailwind + HTMX)
+- ✅ **Web UI với tabs** - Tách riêng Excel và PDF upload (v1.3.0)
 - ✅ API RESTful
 
 ---
@@ -927,8 +928,8 @@ Internal use only - Vietjet Aviation Joint Stock Company
 
 ---
 
-**Version**: 1.2.4 (No-DB + Empty Mapping Support + Single-Instance Deployment)  
-**Last Updated**: December 13, 2025  
+**Version**: 1.3.0 (PDF Support + UI Improvements)  
+**Last Updated**: December 18, 2025  
 **Architecture**: No-DB (Metadata in JSON files, Ephemeral storage)  
 **Deployment**: Single-instance Cloud Run (min-instances 1, max-instances 1)  
 **UI Routes**: Chuyển sang dùng No-DB endpoints (`/api/v1/no-db-files/*`)  
