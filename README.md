@@ -516,11 +516,16 @@ gcloud secrets add-iam-policy-binding compdf-secret-key \
 # 4.1. Ensure code is up-to-date
 git pull origin main
 
-# 4.2. Deploy to Cloud Run (No-DB, Single Instance)
+# 4.2. Build Docker image
 PROJECT=$(gcloud config get-value project)
+gcloud builds submit \
+    --config cloudbuild.yaml \
+    --substitutions "_SHORT_SHA=latest"
+
+# 4.3. Deploy to Cloud Run (No-DB, Single Instance)
 SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
-# Nếu dùng Environment Variables (Cách 1)
+# 4.4. Deploy với Environment Variables (Cách 1)
 gcloud run deploy roster-mapper \
     --image "gcr.io/$PROJECT/roster-mapper:latest" \
     --region asia-southeast1 \
@@ -548,7 +553,7 @@ gcloud run deploy roster-mapper \
     --max-instances 1 \
     --concurrency 80
 
-# Hoặc nếu dùng Secret Manager (Cách 2 - Khuyến nghị)
+# 4.5. Hoặc Deploy với Secret Manager (Cách 2 - Khuyến nghị)
 gcloud run deploy roster-mapper \
     --image "gcr.io/$PROJECT/roster-mapper:latest" \
     --region asia-southeast1 \
@@ -576,7 +581,7 @@ gcloud run deploy roster-mapper \
     --max-instances 1 \
     --concurrency 80
 
-# 4.3. Set IAM policy (cho phép public access)
+# 4.6. Set IAM policy (cho phép public access)
 gcloud run services add-iam-policy-binding roster-mapper \
     --region asia-southeast1 \
     --member allUsers \
@@ -844,15 +849,19 @@ curl http://localhost:8000/health
 ```bash
 # Rebuild và redeploy
 PROJECT=$(gcloud config get-value project)
-IMAGE_TAG="latest"
 SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
+# Set environment variables (nếu dùng Cách 1)
+export SECRET_KEY="your-secret-key-here"
+export COMPDF_PUBLIC_KEY="your-compdf-public-key"
+export COMPDF_SECRET_KEY="your-compdf-secret-key"  # Optional
 
 # Build
 gcloud builds submit \
     --config cloudbuild.yaml \
     --substitutions "_SHORT_SHA=latest"
 
-# Deploy
+# Deploy với Environment Variables (Cách 1)
 gcloud run deploy roster-mapper \
     --image "gcr.io/$PROJECT/roster-mapper:latest" \
     --region asia-southeast1 \
@@ -870,6 +879,37 @@ gcloud run deploy roster-mapper \
     --set-env-vars "AUTO_DETECT_STATION=true" \
     --set-env-vars "MAX_UPLOAD_SIZE=52428800" \
     --set-env-vars "FILE_TTL_SECONDS=3600" \
+    --set-env-vars "SECRET_KEY=$SECRET_KEY" \
+    --set-env-vars "COMPDF_PUBLIC_KEY=$COMPDF_PUBLIC_KEY" \
+    --set-env-vars "COMPDF_SECRET_KEY=$COMPDF_SECRET_KEY" \
+    --memory 1Gi \
+    --cpu 1 \
+    --timeout 300 \
+    --min-instances 1 \
+    --max-instances 1 \
+    --concurrency 80
+
+# Hoặc Deploy với Secret Manager (Cách 2 - Khuyến nghị)
+gcloud run deploy roster-mapper \
+    --image "gcr.io/$PROJECT/roster-mapper:latest" \
+    --region asia-southeast1 \
+    --platform managed \
+    --allow-unauthenticated \
+    --service-account "$SA_RUNNER_EMAIL" \
+    --set-env-vars "STORAGE_TYPE=local" \
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" \
+    --set-env-vars "OUTPUT_DIR=/tmp/output" \
+    --set-env-vars "TEMP_DIR=/tmp/temp" \
+    --set-env-vars "META_DIR=/tmp/meta" \
+    --set-env-vars "APP_ENV=production" \
+    --set-env-vars "LOG_LEVEL=INFO" \
+    --set-env-vars "DEBUG=false" \
+    --set-env-vars "AUTO_DETECT_STATION=true" \
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" \
+    --set-env-vars "FILE_TTL_SECONDS=3600" \
+    --set-secrets "SECRET_KEY=secret-key:latest" \
+    --set-secrets "COMPDF_PUBLIC_KEY=compdf-public-key:latest" \
+    --set-secrets "COMPDF_SECRET_KEY=compdf-secret-key:latest" \
     --memory 1Gi \
     --cpu 1 \
     --timeout 300 \
@@ -882,16 +922,73 @@ gcloud run deploy roster-mapper \
 ```powershell
 # Rebuild và redeploy
 $PROJECT = gcloud config get-value project
+$SA_RUNNER_EMAIL = "roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
+
+# Set environment variables (nếu dùng Cách 1)
+$env:SECRET_KEY = "your-secret-key-here"
+$env:COMPDF_PUBLIC_KEY = "your-compdf-public-key"
+$env:COMPDF_SECRET_KEY = "your-compdf-secret-key"
 
 # Build
 gcloud builds submit `
     --config cloudbuild.yaml `
     --substitutions "_SHORT_SHA=latest"
 
-# Deploy
+# Deploy với Environment Variables (Cách 1)
 gcloud run deploy roster-mapper `
     --image "gcr.io/$PROJECT/roster-mapper:latest" `
-    --region asia-southeast1
+    --region asia-southeast1 `
+    --platform managed `
+    --allow-unauthenticated `
+    --service-account $SA_RUNNER_EMAIL `
+    --set-env-vars "STORAGE_TYPE=local" `
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" `
+    --set-env-vars "OUTPUT_DIR=/tmp/output" `
+    --set-env-vars "TEMP_DIR=/tmp/temp" `
+    --set-env-vars "META_DIR=/tmp/meta" `
+    --set-env-vars "APP_ENV=production" `
+    --set-env-vars "LOG_LEVEL=INFO" `
+    --set-env-vars "DEBUG=false" `
+    --set-env-vars "AUTO_DETECT_STATION=true" `
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" `
+    --set-env-vars "FILE_TTL_SECONDS=3600" `
+    --set-env-vars "SECRET_KEY=$env:SECRET_KEY" `
+    --set-env-vars "COMPDF_PUBLIC_KEY=$env:COMPDF_PUBLIC_KEY" `
+    --set-env-vars "COMPDF_SECRET_KEY=$env:COMPDF_SECRET_KEY" `
+    --memory 1Gi `
+    --cpu 1 `
+    --timeout 300 `
+    --min-instances 1 `
+    --max-instances 1 `
+    --concurrency 80
+
+# Hoặc Deploy với Secret Manager (Cách 2 - Khuyến nghị)
+gcloud run deploy roster-mapper `
+    --image "gcr.io/$PROJECT/roster-mapper:latest" `
+    --region asia-southeast1 `
+    --platform managed `
+    --allow-unauthenticated `
+    --service-account $SA_RUNNER_EMAIL `
+    --set-env-vars "STORAGE_TYPE=local" `
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" `
+    --set-env-vars "OUTPUT_DIR=/tmp/output" `
+    --set-env-vars "TEMP_DIR=/tmp/temp" `
+    --set-env-vars "META_DIR=/tmp/meta" `
+    --set-env-vars "APP_ENV=production" `
+    --set-env-vars "LOG_LEVEL=INFO" `
+    --set-env-vars "DEBUG=false" `
+    --set-env-vars "AUTO_DETECT_STATION=true" `
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" `
+    --set-env-vars "FILE_TTL_SECONDS=3600" `
+    --set-secrets "SECRET_KEY=secret-key:latest" `
+    --set-secrets "COMPDF_PUBLIC_KEY=compdf-public-key:latest" `
+    --set-secrets "COMPDF_SECRET_KEY=compdf-secret-key:latest" `
+    --memory 1Gi `
+    --cpu 1 `
+    --timeout 300 `
+    --min-instances 1 `
+    --max-instances 1 `
+    --concurrency 80
 ```
 
 **Docker Compose:**
