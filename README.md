@@ -587,7 +587,7 @@ gcloud run services add-iam-policy-binding roster-mapper \
     --member allUsers \
     --role roles/run.invoker
 
-# 4.4. Get service URL
+# 4.7. Get service URL
 SERVICE_URL=$(gcloud run services describe roster-mapper \
     --region asia-southeast1 \
     --format='value(status.url)')
@@ -599,16 +599,21 @@ echo "✅ Service deployed to: $SERVICE_URL"
 # 4.1. Ensure code is up-to-date
 git pull origin main
 
-# 4.2. Set environment variables (Cách 1)
+# 4.2. Build Docker image
+$PROJECT = gcloud config get-value project
+gcloud builds submit `
+    --config cloudbuild.yaml `
+    --substitutions "_SHORT_SHA=latest"
+
+# 4.3. Set environment variables (Cách 1)
 $env:SECRET_KEY = "your-secret-key-here"
 $env:COMPDF_PUBLIC_KEY = "your-compdf-public-key"
 $env:COMPDF_SECRET_KEY = "your-compdf-secret-key"
 
-# 4.3. Deploy to Cloud Run (No-DB, Single Instance)
-$PROJECT = gcloud config get-value project
+# 4.4. Deploy to Cloud Run (No-DB, Single Instance)
 $SA_RUNNER_EMAIL = "roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
-# Nếu dùng Environment Variables (Cách 1)
+# 4.5. Deploy với Environment Variables (Cách 1)
 gcloud run deploy roster-mapper `
     --image "gcr.io/$PROJECT/roster-mapper:latest" `
     --region asia-southeast1 `
@@ -636,7 +641,7 @@ gcloud run deploy roster-mapper `
     --max-instances 1 `
     --concurrency 80
 
-# Hoặc nếu dùng Secret Manager (Cách 2 - Khuyến nghị)
+# 4.6. Hoặc Deploy với Secret Manager (Cách 2 - Khuyến nghị)
 gcloud run deploy roster-mapper `
     --image "gcr.io/$PROJECT/roster-mapper:latest" `
     --region asia-southeast1 `
@@ -664,13 +669,13 @@ gcloud run deploy roster-mapper `
     --max-instances 1 `
     --concurrency 80
 
-# 4.4. Set IAM policy (cho phép public access)
+# 4.7. Set IAM policy (cho phép public access)
 gcloud run services add-iam-policy-binding roster-mapper `
     --region asia-southeast1 `
     --member allUsers `
     --role roles/run.invoker
 
-# 4.5. Get service URL
+# 4.8. Get service URL
 $SERVICE_URL = gcloud run services describe roster-mapper `
     --region asia-southeast1 `
     --format='value(status.url)'
