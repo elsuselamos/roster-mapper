@@ -477,18 +477,52 @@ gcloud projects add-iam-policy-binding $PROJECT `
     --role="roles/logging.logWriter"
 ```
 
-#### Bước 3: Build và Deploy Cloud Run (Single Instance)
+#### Bước 3: Cấu hình Secrets và API Keys
+
+**Cách 1: Set Environment Variables trực tiếp (Đơn giản)**
+
+```bash
+# Set các biến cần thiết
+export SECRET_KEY="your-secret-key-here"
+export COMPDF_PUBLIC_KEY="your-compdf-public-key"
+export COMPDF_SECRET_KEY="your-compdf-secret-key"  # Optional
+```
+
+**Cách 2: Sử dụng Secret Manager (Khuyến nghị cho Production)**
+
+```bash
+# 3.1. Tạo secrets trong Secret Manager
+echo -n "your-secret-key-here" | gcloud secrets create secret-key --data-file=-
+echo -n "your-compdf-public-key" | gcloud secrets create compdf-public-key --data-file=-
+echo -n "your-compdf-secret-key" | gcloud secrets create compdf-secret-key --data-file=-
+
+# 3.2. Grant quyền cho Service Account
+SA_RUNNER_EMAIL="roster-mapper-runner@$(gcloud config get-value project).iam.gserviceaccount.com"
+gcloud secrets add-iam-policy-binding secret-key \
+    --member="serviceAccount:$SA_RUNNER_EMAIL" \
+    --role="roles/secretmanager.secretAccessor"
+gcloud secrets add-iam-policy-binding compdf-public-key \
+    --member="serviceAccount:$SA_RUNNER_EMAIL" \
+    --role="roles/secretmanager.secretAccessor"
+gcloud secrets add-iam-policy-binding compdf-secret-key \
+    --member="serviceAccount:$SA_RUNNER_EMAIL" \
+    --role="roles/secretmanager.secretAccessor"
+```
+
+#### Bước 4: Build và Deploy Cloud Run (Single Instance)
 
 **Linux/Mac:**
 ```bash
-# 3.1. Ensure code is up-to-date
+# 4.1. Ensure code is up-to-date
 git pull origin main
 
-# 3.2. Deploy to Cloud Run (No-DB, Single Instance)
+# 4.2. Deploy to Cloud Run (No-DB, Single Instance)
+PROJECT=$(gcloud config get-value project)
 SA_RUNNER_EMAIL="roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
+# Nếu dùng Environment Variables (Cách 1)
 gcloud run deploy roster-mapper \
-    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" \
+    --image "gcr.io/$PROJECT/roster-mapper:latest" \
     --region asia-southeast1 \
     --platform managed \
     --allow-unauthenticated \
@@ -504,6 +538,9 @@ gcloud run deploy roster-mapper \
     --set-env-vars "AUTO_DETECT_STATION=true" \
     --set-env-vars "MAX_UPLOAD_SIZE=52428800" \
     --set-env-vars "FILE_TTL_SECONDS=3600" \
+    --set-env-vars "SECRET_KEY=$SECRET_KEY" \
+    --set-env-vars "COMPDF_PUBLIC_KEY=$COMPDF_PUBLIC_KEY" \
+    --set-env-vars "COMPDF_SECRET_KEY=$COMPDF_SECRET_KEY" \
     --memory 1Gi \
     --cpu 1 \
     --timeout 300 \
@@ -511,13 +548,41 @@ gcloud run deploy roster-mapper \
     --max-instances 1 \
     --concurrency 80
 
-# 3.3. Set IAM policy (cho phép public access)
+# Hoặc nếu dùng Secret Manager (Cách 2 - Khuyến nghị)
+gcloud run deploy roster-mapper \
+    --image "gcr.io/$PROJECT/roster-mapper:latest" \
+    --region asia-southeast1 \
+    --platform managed \
+    --allow-unauthenticated \
+    --service-account "$SA_RUNNER_EMAIL" \
+    --set-env-vars "STORAGE_TYPE=local" \
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" \
+    --set-env-vars "OUTPUT_DIR=/tmp/output" \
+    --set-env-vars "TEMP_DIR=/tmp/temp" \
+    --set-env-vars "META_DIR=/tmp/meta" \
+    --set-env-vars "APP_ENV=production" \
+    --set-env-vars "LOG_LEVEL=INFO" \
+    --set-env-vars "DEBUG=false" \
+    --set-env-vars "AUTO_DETECT_STATION=true" \
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" \
+    --set-env-vars "FILE_TTL_SECONDS=3600" \
+    --set-secrets "SECRET_KEY=secret-key:latest" \
+    --set-secrets "COMPDF_PUBLIC_KEY=compdf-public-key:latest" \
+    --set-secrets "COMPDF_SECRET_KEY=compdf-secret-key:latest" \
+    --memory 1Gi \
+    --cpu 1 \
+    --timeout 300 \
+    --min-instances 1 \
+    --max-instances 1 \
+    --concurrency 80
+
+# 4.3. Set IAM policy (cho phép public access)
 gcloud run services add-iam-policy-binding roster-mapper \
     --region asia-southeast1 \
     --member allUsers \
     --role roles/run.invoker
 
-# 3.4. Get service URL
+# 4.4. Get service URL
 SERVICE_URL=$(gcloud run services describe roster-mapper \
     --region asia-southeast1 \
     --format='value(status.url)')
@@ -526,15 +591,21 @@ echo "✅ Service deployed to: $SERVICE_URL"
 
 **PowerShell (Windows):**
 ```powershell
-# 3.1. Ensure code is up-to-date
+# 4.1. Ensure code is up-to-date
 git pull origin main
 
+# 4.2. Set environment variables (Cách 1)
+$env:SECRET_KEY = "your-secret-key-here"
+$env:COMPDF_PUBLIC_KEY = "your-compdf-public-key"
+$env:COMPDF_SECRET_KEY = "your-compdf-secret-key"
 
-# 3.2. Deploy to Cloud Run (No-DB, Single Instance)
+# 4.3. Deploy to Cloud Run (No-DB, Single Instance)
+$PROJECT = gcloud config get-value project
 $SA_RUNNER_EMAIL = "roster-mapper-runner@$PROJECT.iam.gserviceaccount.com"
 
+# Nếu dùng Environment Variables (Cách 1)
 gcloud run deploy roster-mapper `
-    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" `
+    --image "gcr.io/$PROJECT/roster-mapper:latest" `
     --region asia-southeast1 `
     --platform managed `
     --allow-unauthenticated `
@@ -550,6 +621,9 @@ gcloud run deploy roster-mapper `
     --set-env-vars "AUTO_DETECT_STATION=true" `
     --set-env-vars "MAX_UPLOAD_SIZE=52428800" `
     --set-env-vars "FILE_TTL_SECONDS=3600" `
+    --set-env-vars "SECRET_KEY=$env:SECRET_KEY" `
+    --set-env-vars "COMPDF_PUBLIC_KEY=$env:COMPDF_PUBLIC_KEY" `
+    --set-env-vars "COMPDF_SECRET_KEY=$env:COMPDF_SECRET_KEY" `
     --memory 1Gi `
     --cpu 1 `
     --timeout 300 `
@@ -557,13 +631,41 @@ gcloud run deploy roster-mapper `
     --max-instances 1 `
     --concurrency 80
 
-# 3.3. Set IAM policy (cho phép public access)
+# Hoặc nếu dùng Secret Manager (Cách 2 - Khuyến nghị)
+gcloud run deploy roster-mapper `
+    --image "gcr.io/$PROJECT/roster-mapper:latest" `
+    --region asia-southeast1 `
+    --platform managed `
+    --allow-unauthenticated `
+    --service-account $SA_RUNNER_EMAIL `
+    --set-env-vars "STORAGE_TYPE=local" `
+    --set-env-vars "STORAGE_DIR=/tmp/uploads" `
+    --set-env-vars "OUTPUT_DIR=/tmp/output" `
+    --set-env-vars "TEMP_DIR=/tmp/temp" `
+    --set-env-vars "META_DIR=/tmp/meta" `
+    --set-env-vars "APP_ENV=production" `
+    --set-env-vars "LOG_LEVEL=INFO" `
+    --set-env-vars "DEBUG=false" `
+    --set-env-vars "AUTO_DETECT_STATION=true" `
+    --set-env-vars "MAX_UPLOAD_SIZE=52428800" `
+    --set-env-vars "FILE_TTL_SECONDS=3600" `
+    --set-secrets "SECRET_KEY=secret-key:latest" `
+    --set-secrets "COMPDF_PUBLIC_KEY=compdf-public-key:latest" `
+    --set-secrets "COMPDF_SECRET_KEY=compdf-secret-key:latest" `
+    --memory 1Gi `
+    --cpu 1 `
+    --timeout 300 `
+    --min-instances 1 `
+    --max-instances 1 `
+    --concurrency 80
+
+# 4.4. Set IAM policy (cho phép public access)
 gcloud run services add-iam-policy-binding roster-mapper `
     --region asia-southeast1 `
     --member allUsers `
     --role roles/run.invoker
 
-# 3.4. Get service URL
+# 4.5. Get service URL
 $SERVICE_URL = gcloud run services describe roster-mapper `
     --region asia-southeast1 `
     --format='value(status.url)'
@@ -577,19 +679,19 @@ Write-Host "✅ Service deployed to: $SERVICE_URL"
 - ⚠️ **Instance restart**: Files trong `/tmp` sẽ mất (ephemeral storage)
 - ⚠️ **Chi phí**: Instance luôn chạy (không scale to zero)
 
-#### Bước 4: Verify Deployment
+#### Bước 5: Verify Deployment
 
 ```bash
-# 4.1. Health check
+# 5.1. Health check
 curl "$SERVICE_URL/health"
 # Expected: {"status":"ok","storage":{"writable":true},...}
 
-# 4.2. Test No-DB upload API
+# 5.2. Test No-DB upload API
 curl -X POST "$SERVICE_URL/api/v1/no-db-files/upload" \
     -F "file=@test_file.xlsx" \
     -F "station=HAN"
 
-# 4.3. Check logs
+# 5.3. Check logs
 gcloud run logs read roster-mapper \
     --region asia-southeast1 \
     --limit 50 \
@@ -780,16 +882,15 @@ gcloud run deploy roster-mapper \
 ```powershell
 # Rebuild và redeploy
 $PROJECT = gcloud config get-value project
-$SHORT_SHA = git rev-parse --short HEAD
 
 # Build
 gcloud builds submit `
     --config cloudbuild.yaml `
-    --substitutions "_SHORT_SHA=$SHORT_SHA"
+    --substitutions "_SHORT_SHA=latest"
 
 # Deploy
 gcloud run deploy roster-mapper `
-    --image "gcr.io/$PROJECT/roster-mapper:$SHORT_SHA" `
+    --image "gcr.io/$PROJECT/roster-mapper:latest" `
     --region asia-southeast1
 ```
 

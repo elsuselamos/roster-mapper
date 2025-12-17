@@ -67,8 +67,7 @@ class Settings(BaseSettings):
     AUTO_DETECT_STATION: bool = True
     
     # Security
-    SECRET_KEY: str = "change-me-in-production"
-    API_KEY: str = "your-api-key-here"
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me-in-production")
     
     # ComPDF API
     # Note: Get these from ComPDF API console: https://api.compdf.com -> API Key section
